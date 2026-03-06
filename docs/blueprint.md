@@ -1,0 +1,19 @@
+# **App Name**: VIOLA (Virtual Office Layanan Peserta)
+
+## Core Features:
+
+- Online Queue Enrollment: Participants can fill out a form with their full name, a validated WhatsApp number, and choose from service types ('Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan'). The system automatically generates and displays a unique queue number (e.g., A01-A20), along with a fixed Zoom meeting link. If the daily quota of 20 queues is met, a 'Kuota hari ini sudah penuh.' notification is displayed. There is no return to home button after submission. A WhatsApp message will be sent to the confirmed number after submission.
+- Public Real-time Service Board: An auto-refreshing public dashboard displays the currently served participant's number, name, and service time. It also shows the next participant in line, the total number of queues for the day, and the last five participants who have been served. This display is designed to be large and easy to read, suitable for showing on a Zoom screen.
+- Admin Queue Management & Calling: A secure, login-protected page for administrators to view the current day's queue list. Features include a 'Call' button which, when clicked, changes the participant's status to 'Sedang Dilayani' and triggers a Text-to-Speech tool announcement like 'Nomor antrian A01, atas nama Bapak/Ibu [Nama], dipersilakan masuk ke ruang pelayanan.'. A 'Selesai' button moves the participant to the 'last served' list and prepares the next in queue. This page also features a button to navigate to the public dashboard.
+- Automated WhatsApp Notifications: The system automatically sends a WhatsApp message containing the queue number, name, service type, and Zoom link upon successful enrollment. Additionally, a reminder notification is sent via WhatsApp when the participant's turn is approaching (i.e., when their queue is 1 number away). All messages are sent from a single admin WhatsApp number.
+- Daily Queue Data Export: Admins have the capability to download daily queue data in CSV format. The report includes key information such as date, participant name, phone number, chosen service type, queue number, and status.
+
+## Style Guidelines:
+
+- Primary color: `#336BCD` (RGB: 51, 107, 205). A rich blue chosen to convey professionalism, trustworthiness, and a sense of calm efficiency, suitable for a virtual office environment. This color is balanced yet impactful.
+- Background color: `#EBF1FF` (RGB: 235, 241, 255). A very light and subtly desaturated shade of the primary blue's hue, providing a clean, spacious, and harmonious backdrop that enhances readability and keeps the focus on content.
+- Accent color: `#12A9C2` (RGB: 18, 169, 194). An analogous teal hue chosen for its vibrant contrast against the primary blue, ensuring that calls to action, highlights, and important information stand out effectively with a modern flair.
+- Headlines and body text: 'Inter' (sans-serif). This choice ensures excellent readability and a contemporary, objective aesthetic across all interface elements, aligning with the app's professional and straightforward purpose.
+- Utilize a consistent set of simple, professional line-art or flat icons. These should be easily recognizable and enhance user navigation without overwhelming the minimalist design.
+- The layout should be clean, spacious, and highly responsive, ensuring optimal display and usability across various screen sizes. Priority is given to clear presentation of information, especially for the public dashboard to be legible on large displays.
+- Incorporate subtle and swift animations for interactive elements, such as form submissions, queue status updates, and button clicks. These animations should provide clear visual feedback to the user without being distracting.
