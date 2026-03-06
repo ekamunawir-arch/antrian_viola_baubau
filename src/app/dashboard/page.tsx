@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -172,9 +173,12 @@ export default function PublicDashboard() {
                         <p className="text-sm font-bold truncate leading-tight">{p.fullName}</p>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase">{p.serviceType}</span>
-                          <span className="text-xl font-black text-emerald-600 uppercase flex items-center gap-1.5">
-                            <Clock className="w-5 h-5" /> {calculateDuration(p.serveStartTime || '', p.serveEndTime || null)}
-                          </span>
+                          <div className="text-right">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase leading-none mb-1">Waktu Layanan</p>
+                            <span className="text-xl font-black text-emerald-600 uppercase flex items-center gap-1.5 justify-end">
+                              <Clock className="w-5 h-5" /> {calculateDuration(p.serveStartTime || '', p.serveEndTime || null)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
