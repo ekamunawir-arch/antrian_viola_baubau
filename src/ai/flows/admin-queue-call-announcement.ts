@@ -20,6 +20,7 @@ export type AdminQueueCallAnnouncementInput = z.infer<typeof AdminQueueCallAnnou
 
 const AdminQueueCallAnnouncementOutputSchema = z.object({
   audioDataUri: z.string().describe('The generated audio announcement as a WAV data URI.'),
+  error: z.string().optional().describe('Error code or message if the generation failed.'),
 });
 export type AdminQueueCallAnnouncementOutput = z.infer<typeof AdminQueueCallAnnouncementOutputSchema>;
 
@@ -71,36 +72,46 @@ const adminQueueCallAnnouncementFlow = ai.defineFlow(
     outputSchema: AdminQueueCallAnnouncementOutputSchema,
   },
   async (input) => {
-    // Modified prompt text as per user request
-    const promptText = `Antrian selanjutnya Nomor ${input.queueNumber} atas nama ${input.participantName}`;
+    try {
+      const promptText = `Antrian selanjutnya Nomor ${input.queueNumber} atas nama ${input.participantName}`;
 
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' }, // Choose a suitable voice
+      const { media } = await ai.generate({
+        model: googleAI.model('gemini-2.5-flash-preview-tts'),
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            },
           },
         },
-      },
-      prompt: promptText,
-    });
+        prompt: promptText,
+      });
 
-    if (!media || !media.url) {
-      throw new Error('No audio media returned from TTS model.');
+      if (!media || !media.url) {
+        throw new Error('No audio media returned from TTS model.');
+      }
+
+      const audioBuffer = Buffer.from(
+        media.url.substring(media.url.indexOf(',') + 1),
+        'base64'
+      );
+
+      const wavBase64 = await toWav(audioBuffer);
+
+      return {
+        audioDataUri: 'data:audio/wav;base64,' + wavBase64,
+      };
+    } catch (error: any) {
+      // Handle Rate Limit/Quota error explicitly without throwing
+      if (error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429')) {
+        return {
+          audioDataUri: '',
+          error: 'QUOTA_EXHAUSTED'
+        };
+      }
+      // Re-throw other unexpected errors
+      throw error;
     }
-
-    // The media.url for AUDIO contains the base64 encoded PCM data
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-
-    const wavBase64 = await toWav(audioBuffer);
-
-    return {
-      audioDataUri: 'data:audio/wav;base64,' + wavBase64,
-    };
   }
 );

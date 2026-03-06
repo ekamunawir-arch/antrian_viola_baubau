@@ -16,6 +16,7 @@ import {
   Save,
   ArrowLeft,
   Video,
+  User,
   AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,6 @@ export default function AdminDashboard() {
   };
 
   const handleCall = async (p: Participant) => {
-    // Optimistically update status to show calling state
     updateParticipantStatus(p.id, 'Being Served');
     
     try {
@@ -111,23 +111,27 @@ export default function AdminDashboard() {
         queueNumber: p.queueNumber,
         participantName: p.fullName
       });
-      playSequentially(result.audioDataUri);
+
+      if (result.error === 'QUOTA_EXHAUSTED') {
+        toast({ 
+          variant: "destructive", 
+          title: "Batas Pemanggilan Tercapai", 
+          description: "Sistem suara mencapai batas kuota sementara. Mohon tunggu sekitar 1 menit sebelum memanggil lagi." 
+        });
+        return;
+      }
       
-      toast({ title: "Memanggil Antrian", description: `Memanggil ${p.queueNumber} - ${p.fullName}` });
-      console.log(`Sending Zoom Link ${zoomLink} to ${p.whatsapp}`);
+      if (result.audioDataUri) {
+        playSequentially(result.audioDataUri);
+        toast({ title: "Memanggil Antrian", description: `Memanggil ${p.queueNumber} - ${p.fullName}` });
+      }
       
     } catch (error: any) {
-      console.error("TTS gagal:", error);
-      
-      // Check for Rate Limit / Quota Exceeded error
-      const isQuotaError = error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429');
-      
+      console.error("Gagal memanggil:", error);
       toast({ 
         variant: "destructive", 
-        title: isQuotaError ? "Batas Pemanggilan Tercapai" : "Gagal memanggil", 
-        description: isQuotaError 
-          ? "Sistem suara mencapai batas kuota sementara. Mohon tunggu sekitar 1 menit sebelum memanggil lagi." 
-          : "Terjadi kesalahan pada sistem suara." 
+        title: "Gagal Memanggil", 
+        description: "Terjadi kesalahan pada sistem suara." 
       });
     }
   };
@@ -309,27 +313,37 @@ export default function AdminDashboard() {
             </Card>
 
             <div className="space-y-6">
-              <Card className="shadow-sm border-l-4 border-l-primary">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Sedang Dilayani</CardTitle>
+              <Card className="shadow-sm border-l-4 border-l-primary overflow-hidden">
+                <CardHeader className="bg-primary/5 p-4 border-b">
+                  <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <Play className="w-4 h-4" /> Sedang Dilayani
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="p-4 space-y-3">
                   {beingServedList.length > 0 ? (
                     beingServedList.map((p) => (
-                      <div key={p.id} className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl border border-primary/10 transition-all">
+                      <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in zoom-in duration-300">
                         <div className="bg-primary text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black shrink-0">
                           {p.queueNumber}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold truncate text-xs leading-tight">{p.fullName}</p>
-                          <Badge variant="outline" className="text-[9px] px-1 h-3.5 uppercase font-bold text-muted-foreground border-muted-foreground/30 mt-0.5">
-                            {p.serviceType}
-                          </Badge>
+                          <div className="flex items-center justify-between mt-1">
+                            <Badge variant="outline" className="text-[8px] px-1 h-3.5 uppercase font-bold text-muted-foreground border-muted-foreground/30">
+                              {p.serviceType}
+                            </Badge>
+                            <span className="text-[9px] font-bold text-sky-600 flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" /> Aktif
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-muted-foreground italic text-sm py-4">Tidak ada yang sedang dilayani.</div>
+                    <div className="text-center py-10 opacity-30">
+                      <User className="w-10 h-10 mx-auto mb-2" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest">Tidak ada layanan aktif</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
