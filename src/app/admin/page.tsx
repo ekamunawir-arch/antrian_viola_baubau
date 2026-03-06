@@ -33,7 +33,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getQueueData, updateParticipantStatus, getSettings, saveSettings } from '@/lib/queue-store';
+import { getQueueData, updateParticipantStatus, getSettings, saveSettings, clearQueueData } from '@/lib/queue-store';
 import { Participant, DEFAULT_ZOOM_LINK, CounterClerk } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
@@ -185,6 +185,14 @@ export default function AdminDashboard() {
     saveSettings({ dailyQuota, zoomLink, clerks });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
+  };
+
+  const handleResetQueue = () => {
+    if (confirm("Apakah Anda yakin ingin menghapus seluruh data antrian hari ini? Tindakan ini tidak dapat dibatalkan.")) {
+      clearQueueData();
+      setParticipants([]);
+      toast({ title: "Antrian Direset", description: "Seluruh data antrian hari ini telah dihapus secara permanen." });
+    }
   };
 
   const downloadCSV = () => {
@@ -526,10 +534,21 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="pt-6 border-t">
-                  <Button onClick={handleSaveSettings} className="w-full h-14 bg-primary hover:bg-primary/90 rounded-xl text-lg font-bold flex gap-2">
+                <div className="pt-6 border-t space-y-6">
+                  <Button onClick={handleSaveSettings} className="w-full h-14 bg-primary hover:bg-primary/90 rounded-xl text-lg font-bold flex gap-2 shadow-md">
                     <Save className="w-5 h-5" /> Simpan Pengaturan
                   </Button>
+
+                  <div className="pt-4">
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleResetQueue} 
+                      className="w-full h-12 rounded-xl text-sm font-bold flex gap-2 opacity-80 hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-4 h-4" /> Hapus Seluruh Antrian Hari Ini
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground text-center mt-2 font-medium">Tindakan ini akan menghapus semua data pendaftar hari ini secara permanen.</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

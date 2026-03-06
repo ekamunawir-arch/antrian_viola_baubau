@@ -1,5 +1,4 @@
 import { Participant, ServiceType, DAILY_QUOTA, SystemSettings, DEFAULT_ZOOM_LINK, DEFAULT_CLERKS } from './queue-types';
-import { sendWhatsAppMessage } from './whatsappService';
 
 const STORAGE_KEY = 'viola_queue_data';
 const SETTINGS_KEY = 'viola_settings';
@@ -27,6 +26,13 @@ export const saveQueueData = (participants: Participant[]) => {
   const today = new Date().toISOString().split('T')[0];
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ participants, date: today }));
   // Dispatch custom event for same-window sync
+  window.dispatchEvent(new Event('viola_storage_update'));
+};
+
+export const clearQueueData = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const newData = { participants: [], date: today };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
   window.dispatchEvent(new Event('viola_storage_update'));
 };
 
