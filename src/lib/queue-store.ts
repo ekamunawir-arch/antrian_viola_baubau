@@ -1,4 +1,5 @@
 import { Participant, ServiceType, DAILY_QUOTA, SystemSettings, DEFAULT_ZOOM_LINK, DEFAULT_CLERKS } from './queue-types';
+import { sendWhatsAppMessage } from './whatsappService';
 
 const STORAGE_KEY = 'viola_queue_data';
 const SETTINGS_KEY = 'viola_settings';
@@ -93,6 +94,27 @@ export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 't
   };
 
   saveQueueData([...participants, newParticipant]);
+
+  try {
+    const { zoomLink } = getSettings();
+
+    const message = `
+VIOLA – Virtual Office Layanan Peserta
+
+Nomor Antrian Anda : ${newParticipant.queueNumber}
+Layanan : ${newParticipant.serviceType}
+
+Silakan menunggu panggilan petugas.
+
+Link Zoom:
+${zoomLink}
+`;
+
+    sendWhatsAppMessage(newParticipant.whatsapp, message);
+  } catch (error) {
+    console.error("WhatsApp notification failed:", error);
+  }
+
   return { success: true, participant: newParticipant };
 };
 
