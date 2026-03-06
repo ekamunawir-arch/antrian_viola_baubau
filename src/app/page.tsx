@@ -10,9 +10,8 @@ import {
   CheckCircle2, 
   XCircle, 
   RefreshCcw, 
-  LayoutDashboard, 
-  Settings,
   Home,
+  Settings,
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -60,7 +59,7 @@ export default function ParticipantIntake() {
       total: participants.length,
       waiting: participants.filter(p => p.status === 'Waiting').length,
       served: participants.filter(p => p.status === 'Finished').length,
-      absent: 0, // Mock for absent
+      absent: 0, 
       current: participants.find(p => p.status === 'Being Served') || null,
       lastFinished: [...participants].reverse().find(p => p.status === 'Finished') || null
     });
@@ -68,7 +67,7 @@ export default function ParticipantIntake() {
 
   useEffect(() => {
     updateQueueInfo();
-    const interval = setInterval(updateQueueInfo, 30000); // Auto refresh info every 30s
+    const interval = setInterval(updateQueueInfo, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -100,7 +99,7 @@ export default function ParticipantIntake() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bpjs flex flex-col font-body">
+    <div className="min-h-screen bg-background flex flex-col font-body">
       {/* Header Bar */}
       <header className="bg-[#005a78] text-white p-4 flex justify-between items-center shadow-md">
         <div className="flex items-center gap-3">
@@ -122,74 +121,7 @@ export default function ParticipantIntake() {
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Queue Information */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="space-y-1">
-            <h2 className="text-3xl font-black text-[#005a78] font-headline">Informasi Antrian Hari Ini</h2>
-            <p className="text-muted-foreground font-medium">
-              {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}
-            </p>
-            <Badge variant="outline" className="mt-2 bg-white/50 border-none flex w-fit gap-2 py-1.5 px-3">
-              <RefreshCcw className="w-3 h-3 text-primary animate-spin-slow" />
-              <span className="text-xs">Refresh dalam 30 detik</span>
-            </Badge>
-          </div>
-
-          <div className="space-y-4">
-            <Card className="bg-white/40 border-none shadow-sm overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 text-primary mb-2">
-                  <RefreshCcw className="w-5 h-5" />
-                  <span className="font-bold text-sm uppercase tracking-wider">Sedang Diproses</span>
-                </div>
-                {queueInfo.current ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-4xl font-black text-[#005a78]">{queueInfo.current.queueNumber}</span>
-                    <span className="font-bold text-lg">{queueInfo.current.fullName}</span>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground italic text-sm">Tidak ada antrian yang sedang diproses</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-emerald-50/40 border-none shadow-sm overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 text-emerald-600 mb-2">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-bold text-sm uppercase tracking-wider">Terakhir Selesai Dilayani</span>
-                </div>
-                {queueInfo.lastFinished ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-3xl font-black text-emerald-700">{queueInfo.lastFinished.queueNumber}</span>
-                    <span className="font-bold">{queueInfo.lastFinished.fullName}</span>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground italic text-sm">Belum ada antrian selesai</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { label: 'Total', value: queueInfo.total, icon: Users, color: 'text-blue-600' },
-              { label: 'Menunggu', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
-              { label: 'Selesai', value: queueInfo.served, icon: CheckCircle2, color: 'text-emerald-600' },
-              { label: 'Tidak Hadir', value: queueInfo.absent, icon: XCircle, color: 'text-rose-500' },
-            ].map((stat, i) => (
-              <Card key={i} className="bg-white border-none shadow-sm text-center">
-                <CardContent className="p-4 flex flex-col items-center gap-2">
-                  <stat.icon className={`w-5 h-5 ${stat.color} opacity-70`} />
-                  <span className={`text-2xl font-black ${stat.color}`}>{stat.value}</span>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{stat.label}</span>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Column: Form or Success */}
+        {/* Left Column: Form or Success */}
         <div className="lg:col-span-7">
           {step === 'form' ? (
             <Card className="shadow-2xl border-none rounded-3xl overflow-hidden bg-white">
@@ -298,10 +230,78 @@ export default function ParticipantIntake() {
             </Card>
           )}
         </div>
+
+        {/* Right Column: Queue Information */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-black text-[#005a78] font-headline">Informasi Antrian Hari Ini</h2>
+            <p className="text-muted-foreground font-medium">
+              {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}
+            </p>
+            <Badge variant="outline" className="mt-2 bg-white/50 border-none flex w-fit gap-2 py-1.5 px-3">
+              <RefreshCcw className="w-3 h-3 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+              <span className="text-xs">Refresh dalam 30 detik</span>
+            </Badge>
+          </div>
+
+          <div className="space-y-4">
+            <Card className="bg-white/40 border-none shadow-sm overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 text-primary mb-2">
+                  <RefreshCcw className="w-5 h-5" />
+                  <span className="font-bold text-sm uppercase tracking-wider">Sedang Diproses</span>
+                </div>
+                {queueInfo.current ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-4xl font-black text-[#005a78]">{queueInfo.current.queueNumber}</span>
+                    <span className="font-bold text-lg">{queueInfo.current.fullName}</span>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic text-sm">Tidak ada antrian yang sedang diproses</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-emerald-50/40 border-none shadow-sm overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 text-emerald-600 mb-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-bold text-sm uppercase tracking-wider">Terakhir Selesai</span>
+                </div>
+                {queueInfo.lastFinished ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-3xl font-black text-emerald-700">{queueInfo.lastFinished.queueNumber}</span>
+                    <span className="font-bold">{queueInfo.lastFinished.fullName}</span>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic text-sm">Belum ada antrian selesai</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+            {[
+              { label: 'Total', value: queueInfo.total, icon: Users, color: 'text-blue-600' },
+              { label: 'Menunggu', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
+              { label: 'Selesai', value: queueInfo.served, icon: CheckCircle2, color: 'text-emerald-600' },
+              { label: 'Absen', value: queueInfo.absent, icon: XCircle, color: 'text-rose-500' },
+            ].map((stat, i) => (
+              <Card key={i} className="bg-white border-none shadow-sm text-center">
+                <CardContent className="p-4 flex flex-col items-center gap-2">
+                  <stat.icon className={`w-5 h-5 ${stat.color} opacity-70`} />
+                  <span className={`text-2xl font-black ${stat.color}`}>{stat.value}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{stat.label}</span>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
       </main>
 
       {/* Footer Bar */}
-      <footer className="bg-emerald-500 text-white p-4 text-center font-bold tracking-wide shadow-inner">
+      <footer className="bg-emerald-500 text-white p-4 text-center font-bold tracking-wide shadow-inner mt-auto">
         Sistem Antrian Layanan VIOLA Virtual Office Online
       </footer>
       <Toaster />
