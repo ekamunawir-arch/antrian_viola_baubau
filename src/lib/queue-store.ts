@@ -90,7 +90,7 @@ export const clearQueueData = async () => {
 export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Promise<{ success: boolean; error?: string; participant?: Participant }> => {
   const today = getTodayDate();
   
-  // Pastikan mengambil pengaturan terbaru dari Firestore untuk validasi kuota
+  // Ambil settings terbaru langsung dari Firestore sebelum validasi
   let settings = cachedSettings;
   try {
     const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
@@ -133,18 +133,20 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
     const newParticipant = { id: docRef.id, ...newParticipantData };
 
     // Kirim WhatsApp via API Route
+    const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`;
+
     const waResponse = await fetch("/api/send-whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         phone: newParticipant.whatsapp,
-        message: `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`,
+        message: message,
       }),
     });
 
     const waResult = await waResponse.json();
     if (!waResult.success) {
-      console.error("WhatsApp Error:", waResult.error);
+      console.error("WhatsApp Send Error:", waResult.error);
     }
 
     return { success: true, participant: newParticipant };
