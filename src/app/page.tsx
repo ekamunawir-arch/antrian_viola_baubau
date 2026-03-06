@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -26,8 +25,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { addParticipant, getQueueData } from '@/lib/queue-store';
-import { DAILY_QUOTA, Participant } from '@/lib/queue-types';
+import { addParticipant, getQueueData, getSettings } from '@/lib/queue-store';
+import { Participant } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +44,7 @@ export default function ParticipantIntake() {
   const [finalQueue, setFinalQueue] = useState<Participant | null>(null);
   const [isFull, setIsFull] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [dailyQuota, setDailyQuota] = useState(20);
   const [queueInfo, setQueueInfo] = useState({
     total: 0,
     waiting: 0,
@@ -56,7 +56,9 @@ export default function ParticipantIntake() {
 
   const updateQueueInfo = () => {
     const { participants } = getQueueData();
-    setIsFull(participants.length >= DAILY_QUOTA);
+    const settings = getSettings();
+    setDailyQuota(settings.dailyQuota);
+    setIsFull(participants.length >= settings.dailyQuota);
     setQueueInfo({
       total: participants.length,
       waiting: participants.filter(p => p.status === 'Waiting').length,
@@ -71,7 +73,11 @@ export default function ParticipantIntake() {
     setMounted(true);
     updateQueueInfo();
     const interval = setInterval(updateQueueInfo, 30000);
-    return () => clearInterval(interval);
+    window.addEventListener('viola_storage_update', updateQueueInfo);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('viola_storage_update', updateQueueInfo);
+    };
   }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -285,7 +291,7 @@ export default function ParticipantIntake() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
             {[
-              { label: 'Total', value: queueInfo.total, icon: Users, color: 'text-blue-600' },
+              { label: 'Total', value: `${queueInfo.total}/${dailyQuota}`, icon: Users, color: 'text-blue-600' },
               { label: 'Menunggu', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
               { label: 'Selesai', value: queueInfo.served, icon: CheckCircle2, color: 'text-emerald-600' },
               { label: 'Absen', value: queueInfo.absent, icon: XCircle, color: 'text-rose-500' },
@@ -293,7 +299,7 @@ export default function ParticipantIntake() {
               <Card key={i} className="bg-white border-none shadow-sm text-center">
                 <CardContent className="p-4 flex flex-col items-center gap-2">
                   <stat.icon className={`w-5 h-5 ${stat.color} opacity-70`} />
-                  <span className={`text-2xl font-black ${stat.color}`}>{stat.value}</span>
+                  <span className={`text-xl font-black ${stat.color}`}>{stat.value}</span>
                   <span className="text-[10px] uppercase font-bold text-muted-foreground">{stat.label}</span>
                 </CardContent>
               </Card>

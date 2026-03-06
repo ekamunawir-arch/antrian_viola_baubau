@@ -1,6 +1,7 @@
 import { Participant, DAILY_QUOTA } from './queue-types';
 
 const STORAGE_KEY = 'viola_queue_data';
+const SETTINGS_KEY = 'viola_settings';
 
 export const getQueueData = (): { participants: Participant[]; date: string } => {
   if (typeof window === 'undefined') return { participants: [], date: '' };
@@ -28,10 +29,24 @@ export const saveQueueData = (participants: Participant[]) => {
   window.dispatchEvent(new Event('viola_storage_update'));
 };
 
+export const getSettings = (): { dailyQuota: number } => {
+  if (typeof window === 'undefined') return { dailyQuota: DAILY_QUOTA };
+  const stored = localStorage.getItem(SETTINGS_KEY);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  return { dailyQuota: DAILY_QUOTA };
+};
+
+export const saveSettings = (settings: { dailyQuota: number }) => {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  window.dispatchEvent(new Event('viola_storage_update'));
+};
+
 // Listener untuk sinkronisasi antar tab/jendela (cross-tab sync)
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
-    if (event.key === STORAGE_KEY) {
+    if (event.key === STORAGE_KEY || event.key === SETTINGS_KEY) {
       window.dispatchEvent(new Event('viola_storage_update'));
     }
   });
@@ -39,7 +54,9 @@ if (typeof window !== 'undefined') {
 
 export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Participant | null => {
   const { participants } = getQueueData();
-  if (participants.length >= DAILY_QUOTA) return null;
+  const { dailyQuota } = getSettings();
+  
+  if (participants.length >= dailyQuota) return null;
 
   const nextNumber = participants.length + 1;
   const queueNumber = `A${nextNumber.toString().padStart(2, '0')}`;
