@@ -9,7 +9,6 @@ import {
   where, 
   getDoc, 
   setDoc,
-  deleteDoc,
   getDocs,
   writeBatch
 } from 'firebase/firestore';
@@ -22,7 +21,7 @@ import {
   DEFAULT_CLERKS 
 } from './queue-types';
 
-// State lokal untuk sinkronisasi sinkron (agar UI tidak perlu refactor besar)
+// State lokal untuk sinkronisasi cepat di UI
 let cachedParticipants: Participant[] = [];
 let cachedSettings: SystemSettings = { 
   dailyQuota: DAILY_QUOTA, 
@@ -32,11 +31,11 @@ let cachedSettings: SystemSettings = {
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-// Inisialisasi Listeners Real-time
+// Inisialisasi Listeners Real-time dari Firestore
 if (typeof window !== 'undefined') {
   const today = getTodayDate();
   
-  // Listen Participants
+  // Listen data peserta hari ini
   const q = query(collection(db, 'participants'), where('date', '==', today));
   onSnapshot(q, (snapshot) => {
     cachedParticipants = snapshot.docs.map(doc => ({ 
@@ -47,13 +46,13 @@ if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('viola_storage_update'));
   });
 
-  // Listen Settings
-  onSnapshot(doc(db, 'settings', 'config'), (doc) => {
-    if (doc.exists()) {
-      cachedSettings = doc.data() as SystemSettings;
+  // Listen pengaturan sistem (kuota, zoom, loket)
+  onSnapshot(doc(db, 'settings', 'config'), (snapshot) => {
+    if (snapshot.exists()) {
+      cachedSettings = snapshot.data() as SystemSettings;
     } else {
-      // Initialize default settings in Firestore if not exist
-      setDoc(doc.ref, { 
+      // Inisialisasi default jika dokumen belum ada di Firestore
+      setDoc(doc(db, 'settings', 'config'), { 
         dailyQuota: DAILY_QUOTA, 
         zoomLink: DEFAULT_ZOOM_LINK, 
         clerks: DEFAULT_CLERKS 
@@ -72,7 +71,8 @@ export const getSettings = (): SystemSettings => {
 };
 
 export const saveSettings = async (settings: SystemSettings) => {
-  await setDoc(doc(db, 'settings', 'config'), settings);
+  const docRef = doc(db, 'settings', 'config');
+  await setDoc(docRef, settings, { merge: true });
 };
 
 export const clearQueueData = async () => {
@@ -90,7 +90,7 @@ export const clearQueueData = async () => {
 export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Promise<{ success: boolean; error?: string; participant?: Participant }> => {
   const today = getTodayDate();
   
-  // Pastikan kita punya data pengaturan terbaru
+  // Pastikan mengambil pengaturan terbaru dari Firestore untuk validasi kuota
   let settings = cachedSettings;
   try {
     const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
@@ -98,7 +98,7 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
       settings = settingsDoc.data() as SystemSettings;
     }
   } catch (e) {
-    console.warn("Using cached settings due to fetch error", e);
+    console.warn("Gagal mengambil settings terbaru, menggunakan cache.", e);
   }
   
   if (cachedParticipants.length >= settings.dailyQuota) {
@@ -132,7 +132,7 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
     const docRef = await addDoc(collection(db, 'participants'), newParticipantData);
     const newParticipant = { id: docRef.id, ...newParticipantData };
 
-    // Kirim WhatsApp via API Route (Awaited untuk stabilitas)
+    // Kirim WhatsApp via API Route
     const waResponse = await fetch("/api/send-whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,7 +144,7 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
 
     const waResult = await waResponse.json();
     if (!waResult.success) {
-      console.error("WhatsApp notification failed to send:", waResult.error || waResult.data);
+      console.error("WhatsApp Error:", waResult.error);
     }
 
     return { success: true, participant: newParticipant };

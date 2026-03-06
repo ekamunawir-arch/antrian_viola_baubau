@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         target: phone,
         message: message,
-        // Pastikan URL gambar adalah link publik yang valid
+        // Gunakan URL gambar publik yang valid agar Fonnte bisa memprosesnya
         url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80",
       }),
     });
