@@ -350,7 +350,7 @@ export default function ParticipantIntake() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { label: 'Total Antrian', value: `${queueInfo.total}`, icon: Users, color: 'text-blue-600' },
               { label: 'Menunggu', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
@@ -358,12 +358,12 @@ export default function ParticipantIntake() {
               { label: 'Absen', value: '0', icon: XCircle, color: 'text-rose-500' },
             ].map((stat, i) => (
               <Card key={i} className="bg-white border-none shadow-md text-center group hover:scale-[1.02] transition-all">
-                <CardContent className="p-4 flex flex-col items-center gap-2">
-                  <div className="bg-slate-50 p-2 rounded-lg group-hover:bg-white transition-colors">
-                    <stat.icon className={`w-5 h-5 ${stat.color} opacity-70`} />
+                <CardContent className="p-3 flex flex-col items-center gap-1.5">
+                  <div className="bg-slate-50 p-1.5 rounded-lg group-hover:bg-white transition-colors">
+                    <stat.icon className={`w-4 h-4 ${stat.color} opacity-70`} />
                   </div>
-                  <span className={`text-3xl font-black ${stat.color}`}>{stat.value}</span>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{stat.label}</span>
+                  <span className={`text-xl font-black ${stat.color}`}>{stat.value}</span>
+                  <span className="text-[8px] leading-tight uppercase font-bold text-muted-foreground tracking-tighter">{stat.label}</span>
                 </CardContent>
               </Card>
             ))}
