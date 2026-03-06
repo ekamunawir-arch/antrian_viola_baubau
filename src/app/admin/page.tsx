@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Settings,
   Save,
-  ArrowLeft
+  ArrowLeft,
+  Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,7 +29,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, updateParticipantStatus, getSettings, saveSettings } from '@/lib/queue-store';
-import { Participant } from '@/lib/queue-types';
+import { Participant, DEFAULT_ZOOM_LINK } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
@@ -45,6 +46,7 @@ export default function AdminDashboard() {
   
   // Settings state
   const [dailyQuota, setDailyQuota] = useState(20);
+  const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
   
   // Audio Queue refs
   const audioQueue = useRef<string[]>([]);
@@ -55,6 +57,7 @@ export default function AdminDashboard() {
     const settings = getSettings();
     setParticipants(data.participants);
     setDailyQuota(settings.dailyQuota);
+    setZoomLink(settings.zoomLink);
     setLastSync(new Date());
   };
 
@@ -108,6 +111,10 @@ export default function AdminDashboard() {
         participantName: p.fullName
       });
       playSequentially(result.audioDataUri);
+      
+      // LOGIC: Send Zoom Link to WhatsApp would happen here via API call
+      console.log(`Sending Zoom Link ${zoomLink} to ${p.whatsapp}`);
+      
     } catch (error) {
       console.error("TTS gagal:", error);
       toast({ variant: "destructive", title: "Gagal memanggil", description: "Terjadi kesalahan pada sistem suara." });
@@ -120,8 +127,8 @@ export default function AdminDashboard() {
   };
 
   const handleSaveSettings = () => {
-    saveSettings({ dailyQuota });
-    toast({ title: "Pengaturan Disimpan", description: `Batasan antrian diatur ke ${dailyQuota} peserta.` });
+    saveSettings({ dailyQuota, zoomLink });
+    toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
   };
 
@@ -353,7 +360,8 @@ export default function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6 pt-4">
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {/* Quota Setting */}
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="quota" className="text-base font-bold text-primary uppercase tracking-wider">Kuota Antrian Harian</Label>
                     <p className="text-xs text-muted-foreground">Tentukan berapa banyak peserta maksimal yang dapat mendaftar per hari.</p>
@@ -366,6 +374,25 @@ export default function AdminDashboard() {
                         className="max-w-[120px] h-14 text-center text-2xl font-black rounded-xl"
                       />
                       <div className="text-muted-foreground font-medium">Peserta per hari</div>
+                    </div>
+                  </div>
+
+                  {/* Zoom Link Setting */}
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="zoom" className="text-base font-bold text-primary uppercase tracking-wider">Link Zoom Layanan</Label>
+                    <p className="text-xs text-muted-foreground">Link ini akan dikirimkan ke peserta melalui WhatsApp saat dipanggil.</p>
+                    <div className="relative mt-2">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <Video className="w-5 h-5" />
+                      </div>
+                      <Input 
+                        id="zoom"
+                        type="url" 
+                        value={zoomLink} 
+                        onChange={(e) => setZoomLink(e.target.value)}
+                        placeholder="https://zoom.us/..."
+                        className="h-14 pl-12 rounded-xl text-lg font-medium"
+                      />
                     </div>
                   </div>
                 </div>

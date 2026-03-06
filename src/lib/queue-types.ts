@@ -15,5 +15,10 @@ export interface Participant {
   serveEndTime?: string;
 }
 
-export const ZOOM_LINK = "https://zoom.us/j/viola-virtual-office";
+export interface SystemSettings {
+  dailyQuota: number;
+  zoomLink: string;
+}
+
+export const DEFAULT_ZOOM_LINK = "https://zoom.us/j/viola-virtual-office";
 export const DAILY_QUOTA = 20;

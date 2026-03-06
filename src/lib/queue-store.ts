@@ -1,4 +1,4 @@
-import { Participant, ServiceType, DAILY_QUOTA } from './queue-types';
+import { Participant, ServiceType, DAILY_QUOTA, SystemSettings, DEFAULT_ZOOM_LINK } from './queue-types';
 
 const STORAGE_KEY = 'viola_queue_data';
 const SETTINGS_KEY = 'viola_settings';
@@ -29,16 +29,20 @@ export const saveQueueData = (participants: Participant[]) => {
   window.dispatchEvent(new Event('viola_storage_update'));
 };
 
-export const getSettings = (): { dailyQuota: number } => {
-  if (typeof window === 'undefined') return { dailyQuota: DAILY_QUOTA };
+export const getSettings = (): SystemSettings => {
+  if (typeof window === 'undefined') return { dailyQuota: DAILY_QUOTA, zoomLink: DEFAULT_ZOOM_LINK };
   const stored = localStorage.getItem(SETTINGS_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    const parsed = JSON.parse(stored);
+    return {
+      dailyQuota: parsed.dailyQuota ?? DAILY_QUOTA,
+      zoomLink: parsed.zoomLink ?? DEFAULT_ZOOM_LINK
+    };
   }
-  return { dailyQuota: DAILY_QUOTA };
+  return { dailyQuota: DAILY_QUOTA, zoomLink: DEFAULT_ZOOM_LINK };
 };
 
-export const saveSettings = (settings: { dailyQuota: number }) => {
+export const saveSettings = (settings: SystemSettings) => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   window.dispatchEvent(new Event('viola_storage_update'));
 };
@@ -52,11 +56,19 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Participant | null => {
+export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): { success: boolean; error?: string; participant?: Participant } => {
   const { participants } = getQueueData();
   const { dailyQuota } = getSettings();
   
-  if (participants.length >= dailyQuota) return null;
+  if (participants.length >= dailyQuota) {
+    return { success: false, error: 'Kuota harian telah habis.' };
+  }
+
+  // Cek apakah nomor WA sudah digunakan hari ini
+  const isAlreadyRegistered = participants.some(p => p.whatsapp === data.whatsapp);
+  if (isAlreadyRegistered) {
+    return { success: false, error: 'Nomor WhatsApp ini sudah mengambil antrian hari ini.' };
+  }
 
   // Pilihan prefix berdasarkan jenis layanan
   const prefixMap: Record<ServiceType, string> = {
@@ -80,7 +92,7 @@ export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 't
   };
 
   saveQueueData([...participants, newParticipant]);
-  return newParticipant;
+  return { success: true, participant: newParticipant };
 };
 
 export const updateParticipantStatus = (id: string, status: Participant['status'], staffName?: string) => {

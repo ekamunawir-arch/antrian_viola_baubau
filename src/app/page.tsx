@@ -13,7 +13,9 @@ import {
   Home,
   Settings,
   AlertCircle,
-  Ticket
+  Ticket,
+  MessageSquare,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -97,14 +99,13 @@ export default function ParticipantIntake() {
       serviceType: values.serviceType as ServiceType
     });
 
-    if (result) {
-      setFinalQueue(result);
+    if (result.success && result.participant) {
+      setFinalQueue(result.participant);
       setStep('success');
       updateQueueInfo();
       toast({ title: "Berhasil", description: "Nomor antrian Anda telah didaftarkan." });
     } else {
-      setIsFull(true);
-      toast({ variant: "destructive", title: "Penuh", description: "Kuota antrian hari ini sudah habis." });
+      toast({ variant: "destructive", title: "Pendaftaran Gagal", description: result.error || "Terjadi kesalahan." });
     }
   };
 
@@ -241,6 +242,22 @@ export default function ParticipantIntake() {
                   <Badge className="bg-[#005a78] text-white px-6 py-2 text-lg font-bold rounded-full uppercase tracking-widest">
                     {finalQueue?.serviceType}
                   </Badge>
+                </div>
+
+                {/* WhatsApp Confirmation Alert */}
+                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-3 justify-center text-primary">
+                    <MessageSquare className="w-6 h-6" />
+                    <span className="font-bold text-lg">Konfirmasi WhatsApp</span>
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Mohon pastikan nomor WhatsApp <span className="font-black text-[#005a78] underline">{finalQueue?.whatsapp}</span> Anda aktif dan benar. 
+                    <br /><span className="font-bold">Link Zoom</span> layanan akan dikirimkan ke nomor tersebut saat Anda dipanggil oleh petugas.
+                  </p>
+                  <div className="flex items-start gap-2 text-left bg-white/50 p-3 rounded-xl">
+                    <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-muted-foreground">Satu nomor WhatsApp hanya dapat mengambil satu nomor antrian per hari.</p>
+                  </div>
                 </div>
 
                 <div className="space-y-4 pt-4">
