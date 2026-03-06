@@ -85,7 +85,6 @@ export default function ParticipantIntake() {
       waiting: participants.filter(p => p.status === 'Waiting').length,
       served: participants.filter(p => p.status === 'Finished').length,
       absent: 0, 
-      // Batasi 3 antrian yang sedang dilayani agar layar tidak scroll
       current: participants.filter(p => p.status === 'Being Served').slice(0, 3),
       lastFinished: [...participants].reverse().find(p => p.status === 'Finished') || null
     });
@@ -142,7 +141,7 @@ export default function ParticipantIntake() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
-      {/* Header Bar - Ukuran Normal */}
+      {/* Header Bar */}
       <header className="bg-[#005a78] text-white p-4 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
           <div className="bg-white text-[#005a78] p-2 rounded-xl font-black text-2xl">Q</div>
@@ -292,7 +291,7 @@ export default function ParticipantIntake() {
           )}
         </div>
 
-        {/* Right Column: Queue Information - Ukuran Normal */}
+        {/* Right Column: Queue Information */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex items-end justify-between">
             <div className="space-y-1">
@@ -374,37 +373,45 @@ export default function ParticipantIntake() {
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <AlertDialogContent className="rounded-3xl max-w-sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-2xl font-black text-[#005a78]">Konfirmasi Nomor</AlertDialogTitle>
-            <AlertDialogDescription asChild className="text-center pt-4">
-              <div className="text-base text-muted-foreground">
-                Apakah nomor WhatsApp Anda sudah benar?
-                <div className="mt-6 p-6 bg-primary/5 rounded-2xl border border-primary/20 flex items-center justify-center gap-4">
-                  <Phone className="w-6 h-6 text-primary" />
-                  <span className="text-3xl font-black tracking-widest text-primary">{pendingData?.whatsapp}</span>
+        <AlertDialogContent className="rounded-[2.5rem] max-w-[400px] p-8 border-none shadow-2xl overflow-hidden">
+          <AlertDialogHeader className="space-y-4">
+            <AlertDialogTitle className="text-center text-3xl font-black text-[#005a78] tracking-tight">
+              Konfirmasi Nomor
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild className="text-center">
+              <div className="space-y-6">
+                <p className="text-slate-500 font-medium">Apakah nomor WhatsApp Anda sudah benar?</p>
+                
+                <div className="p-6 bg-primary/5 rounded-[2rem] border-2 border-primary/20 flex items-center justify-center gap-4 shadow-inner group transition-all hover:bg-primary/10">
+                  <div className="bg-primary/10 p-2 rounded-xl group-hover:scale-110 transition-transform">
+                    <Phone className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="text-3xl font-black tracking-widest text-primary tabular-nums">
+                    {pendingData?.whatsapp}
+                  </span>
                 </div>
-                <div className="mt-4 text-xs leading-relaxed px-4">
-                  Sangat penting untuk memastikan nomor ini aktif karena <strong>Link Zoom</strong> layanan akan kami kirimkan ke nomor ini.
+                
+                <div className="text-sm leading-relaxed text-slate-500 px-2">
+                  Sangat penting untuk memastikan nomor ini aktif karena <strong className="text-[#005a78]">Link Zoom</strong> layanan akan kami kirimkan ke nomor ini.
                 </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-col gap-3 sm:flex-col mt-6">
+          <AlertDialogFooter className="flex flex-col gap-3 mt-8 sm:flex-col sm:space-x-0">
             <AlertDialogAction 
               onClick={handleFinalSubmit}
-              className="w-full h-14 bg-primary hover:bg-primary/90 rounded-2xl font-black text-lg shadow-lg"
+              className="w-full h-14 bg-primary hover:bg-primary/90 rounded-2xl font-black text-lg shadow-xl hover:scale-[1.02] transition-all active:scale-[0.98] border-none"
             >
               Ya, Sudah Benar
             </AlertDialogAction>
-            <AlertDialogCancel className="w-full h-14 border-2 rounded-2xl font-bold text-slate-600">
+            <AlertDialogCancel className="w-full h-14 bg-slate-50 hover:bg-slate-100 border-none rounded-2xl font-bold text-slate-500 transition-all hover:text-slate-700">
               Ubah Nomor
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Footer Bar - Ukuran Normal */}
+      {/* Footer Bar */}
       <footer className="bg-emerald-500 text-white p-3 text-center text-xs font-bold tracking-widest shadow-inner mt-12">
         VIOLA Virtual Office Layanan Peserta © 2024 - BPJS Kesehatan
       </footer>
