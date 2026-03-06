@@ -10,6 +10,8 @@ export async function POST(request: Request) {
     }
 
     // Memanggil API Fonnte dari sisi server
+    // Catatan: Parameter 'url' harus berupa link gambar publik (https://...) agar bisa terkirim.
+    // Kami menggunakan gambar placeholder yang representatif sebagai contoh.
     const response = await fetch("https://api.fonnte.com/send", {
       method: "POST",
       headers: {
@@ -19,8 +21,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         target: phone,
         message: message,
-        // Parameter 'url' dihapus karena Fonnte memerlukan URL publik yang bisa diakses internet
-        // Jika ingin menggunakan gambar, pastikan menggunakan URL lengkap (https://...)
+        url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80",
       }),
     });
 
