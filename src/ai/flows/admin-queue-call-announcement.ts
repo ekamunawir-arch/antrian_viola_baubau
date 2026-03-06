@@ -71,7 +71,8 @@ const adminQueueCallAnnouncementFlow = ai.defineFlow(
     outputSchema: AdminQueueCallAnnouncementOutputSchema,
   },
   async (input) => {
-    const promptText = `Nomor antrian ${input.queueNumber}, atas nama Bapak/Ibu ${input.participantName}, dipersilakan masuk ke ruang pelayanan.`;
+    // Modified prompt text as per user request
+    const promptText = `Antrian selanjutnya Nomor ${input.queueNumber} atas nama ${input.participantName}`;
 
     const { media } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
