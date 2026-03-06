@@ -55,7 +55,6 @@ export default function AdminDashboard() {
     return () => window.removeEventListener('viola_storage_update', fetchQueue);
   }, []);
 
-  // Fungsi untuk memutar audio secara berurutan (Sequential Playback)
   const playSequentially = async (dataUri: string) => {
     audioQueue.current.push(dataUri);
     
@@ -99,7 +98,6 @@ export default function AdminDashboard() {
         queueNumber: p.queueNumber,
         participantName: p.fullName
       });
-      // Menambahkan hasil TTS ke antrean putar audio
       playSequentially(result.audioDataUri);
     } catch (error) {
       console.error("TTS gagal:", error);
@@ -271,22 +269,28 @@ export default function AdminDashboard() {
 
           <div className="space-y-6">
             <Card className="shadow-sm border-l-4 border-l-primary">
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Sedang Dilayani</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-3">
                 {beingServedList.length > 0 ? (
                   beingServedList.map((p) => (
-                    <div key={p.id} className="space-y-2 pb-4 border-b last:border-0 last:pb-0">
-                      <div className="text-5xl font-black text-primary">{p.queueNumber}</div>
-                      <div className="font-bold text-xl leading-tight">{p.fullName}</div>
-                      <div className="text-xs font-bold text-muted-foreground bg-muted p-2 rounded-lg uppercase w-fit">
-                        {p.serviceType}
+                    <div key={p.id} className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl border border-primary/10 transition-all">
+                      <div className="bg-primary text-white w-12 h-12 rounded-lg flex items-center justify-center text-xl font-black shrink-0">
+                        {p.queueNumber}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate text-sm leading-tight">{p.fullName}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-[10px] px-1.5 h-4 uppercase font-bold text-muted-foreground border-muted-foreground/30">
+                            {p.serviceType}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-muted-foreground italic text-sm">Tidak ada yang sedang dilayani.</div>
+                  <div className="text-muted-foreground italic text-sm py-4">Tidak ada yang sedang dilayani.</div>
                 )}
               </CardContent>
             </Card>
