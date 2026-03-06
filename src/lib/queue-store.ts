@@ -47,7 +47,7 @@ export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 't
   return newParticipant;
 };
 
-export const updateParticipantStatus = (id: string, status: Participant['status']) => {
+export const updateParticipantStatus = (id: string, status: Participant['status'], staffName?: string) => {
   const { participants } = getQueueData();
   const updated = participants.map(p => {
     if (p.id === id) {
@@ -55,7 +55,7 @@ export const updateParticipantStatus = (id: string, status: Participant['status'
       return { 
         ...p, 
         status,
-        ...(status === 'Being Served' ? { serveStartTime: now } : {}),
+        ...(status === 'Being Served' ? { serveStartTime: now, staffName: staffName || 'Admin VIOLA' } : {}),
         ...(status === 'Finished' ? { serveEndTime: now } : {}),
       };
     }

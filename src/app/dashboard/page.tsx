@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData } from '@/lib/queue-store';
 import { Participant } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User } from 'lucide-react';
 
 export default function PublicDashboard() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -34,7 +33,7 @@ export default function PublicDashboard() {
     };
   }, []);
 
-  const currentlyServing = participants.find(p => p.status === 'Being Served');
+  const beingServedList = participants.filter(p => p.status === 'Being Served');
   const finishedParticipants = participants.filter(p => p.status === 'Finished').slice(-5).reverse();
   const nextInQueue = participants.find(p => p.status === 'Waiting');
   const totalToday = participants.length;
@@ -103,58 +102,69 @@ export default function PublicDashboard() {
         {/* Sidebar: Information Panels */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           
-          {/* Part 1: Currently Serving (Sedang Dilayani) */}
-          <Card className="bg-gradient-to-br from-[#005a78] to-[#003d52] text-white shadow-xl border-none">
-            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-              <div className="bg-white/20 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em]">SEDANG DILAYANI</div>
-              {currentlyServing ? (
-                <>
-                  <div className="text-8xl font-black leading-none drop-shadow-lg">{currentlyServing.queueNumber}</div>
-                  <div className="text-2xl font-black tracking-tight">{currentlyServing.fullName}</div>
-                  <Badge className="bg-white text-primary px-6 py-2 rounded-xl shadow-md text-sm font-bold border-none mt-2">
-                    {currentlyServing.serviceType}
-                  </Badge>
-                  {currentlyServing.serveStartTime && (
-                    <div className="text-xs font-medium flex items-center gap-2 opacity-70">
-                      <Clock className="w-4 h-4" /> Mulai: {new Date(currentlyServing.serveStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {/* Part 1: Currently Serving (Sedang Dilayani) - BARIS LAYOUT */}
+          <Card className="bg-white shadow-lg border-t-4 border-t-primary overflow-hidden">
+            <div className="bg-primary/5 p-4 border-b flex items-center gap-2">
+              <PlayCircle className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-black font-headline tracking-tight uppercase">Sedang Dilayani</h2>
+            </div>
+            <CardContent className="p-4 space-y-4">
+              {beingServedList.length > 0 ? (
+                beingServedList.map((p) => (
+                  <div key={p.id} className="flex flex-col gap-2 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-md animate-in fade-in zoom-in duration-300">
+                    <div className="flex justify-between items-start">
+                      <div className="text-5xl font-black leading-none">{p.queueNumber}</div>
+                      <Badge className="bg-white/20 text-white text-[9px] font-black uppercase border-none">
+                        {p.serviceType}
+                      </Badge>
                     </div>
-                  )}
-                </>
+                    <div className="space-y-1 mt-1">
+                      <div className="text-lg font-black tracking-tight truncate">{p.fullName}</div>
+                      <div className="flex items-center justify-between text-[10px] opacity-70 font-bold uppercase">
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" /> {p.staffName || 'Petugas 1'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {p.serveStartTime ? new Date(p.serveStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
               ) : (
-                <div className="py-8 space-y-2">
-                  <Users className="w-12 h-12 mx-auto opacity-20" />
-                  <p className="text-lg font-bold italic opacity-40">Antrian Kosong</p>
+                <div className="py-12 text-center space-y-3 opacity-30">
+                  <Users className="w-12 h-12 mx-auto" />
+                  <p className="text-sm font-bold italic uppercase tracking-widest">Antrian Kosong</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Part 2: Recently Finished (Sudah Dilayani) */}
-          <Card className="flex-1 bg-white shadow-lg border-none">
-            <CardContent className="p-6 space-y-6">
-              <div className="flex items-center gap-3 border-b pb-4">
-                <ListChecks className="w-6 h-6 text-primary" />
-                <h2 className="text-xl font-black font-headline tracking-tight">Selesai Dilayani</h2>
-              </div>
-              
-              <div className="space-y-4">
+          <Card className="flex-1 bg-white shadow-lg border-none overflow-hidden">
+            <div className="bg-slate-50 p-4 border-b flex items-center gap-2">
+              <ListChecks className="w-5 h-5 text-slate-500" />
+              <h2 className="text-lg font-black font-headline tracking-tight uppercase">Selesai Dilayani</h2>
+            </div>
+            <CardContent className="p-4 space-y-4">
+              <div className="space-y-3">
                 {finishedParticipants.length > 0 ? (
                   finishedParticipants.map((p) => (
                     <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl animate-in slide-in-from-right-4 duration-300">
-                      <div className="bg-primary/10 text-primary w-14 h-14 rounded-xl flex items-center justify-center text-xl font-black shrink-0 border border-primary/20">
+                      <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black shrink-0 border border-primary/20">
                         {p.queueNumber}
                       </div>
                       <div className="flex-1 overflow-hidden">
-                        <p className="text-base font-bold truncate leading-tight">{p.fullName}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase">{p.serviceType}</span>
-                          <span className="text-[9px] font-black text-emerald-600 uppercase">Selesai</span>
+                        <p className="text-sm font-bold truncate leading-tight">{p.fullName}</p>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-[8px] font-bold text-muted-foreground uppercase">{p.serviceType}</span>
+                          <span className="text-[8px] font-black text-emerald-600 uppercase">Selesai</span>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-10 text-muted-foreground font-bold text-sm italic opacity-50">
+                  <div className="text-center py-10 text-muted-foreground font-bold text-sm italic opacity-50 uppercase tracking-widest">
                     Belum ada data
                   </div>
                 )}

@@ -10,6 +10,7 @@ export interface Participant {
   queueNumber: string;
   timestamp: string;
   status: QueueStatus;
+  staffName?: string;
   serveStartTime?: string;
   serveEndTime?: string;
 }
