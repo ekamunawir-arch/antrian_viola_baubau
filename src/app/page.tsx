@@ -12,7 +12,8 @@ import {
   RefreshCcw, 
   Home,
   Settings,
-  AlertCircle
+  AlertCircle,
+  Ticket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,7 +50,7 @@ export default function ParticipantIntake() {
     total: 0,
     waiting: 0,
     served: 0,
-    absent: 0,
+    absent: 0, 
     current: null as Participant | null,
     lastFinished: null as Participant | null
   });
@@ -107,6 +108,8 @@ export default function ParticipantIntake() {
     }
   };
 
+  const remainingQuota = Math.max(0, dailyQuota - queueInfo.total);
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
       {/* Header Bar */}
@@ -134,13 +137,26 @@ export default function ParticipantIntake() {
         <div className="lg:col-span-7">
           {step === 'form' ? (
             <Card className="shadow-2xl border-none rounded-3xl overflow-hidden bg-white">
-              <CardHeader className="text-center pt-10 pb-6 space-y-2">
+              <CardHeader className="text-center pt-10 pb-6 space-y-3">
                 <CardTitle className="text-4xl font-black text-[#005a78] leading-tight">
                   Selamat Datang di <span className="text-primary">Layanan VIOLA</span>
                 </CardTitle>
-                <CardDescription className="text-lg font-bold text-primary tracking-widest uppercase">
-                  Sistem Antrian Online
-                </CardDescription>
+                <div className="space-y-4">
+                  <CardDescription className="text-lg font-bold text-primary tracking-widest uppercase">
+                    Sistem Antrian Online
+                  </CardDescription>
+                  
+                  {/* Sisa Kuota Highlight */}
+                  <div className="bg-primary/5 border border-primary/20 py-3 px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-sm animate-pulse duration-[3000ms]">
+                    <Ticket className="w-6 h-6 text-primary" />
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Sisa Kuota Hari Ini</p>
+                      <p className="text-3xl font-black text-primary leading-none">
+                        {remainingQuota} <span className="text-xs font-bold text-muted-foreground uppercase">Antrian</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="px-8 pb-10">
                 {isFull ? (
