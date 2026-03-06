@@ -376,15 +376,17 @@ export default function ParticipantIntake() {
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-center text-xl font-black text-[#005a78]">Konfirmasi Nomor</AlertDialogTitle>
-            <AlertDialogDescription className="text-center pt-2">
-              Apakah nomor WhatsApp Anda sudah benar?
-              <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/20 flex items-center justify-center gap-3">
-                <Phone className="w-5 h-5 text-primary" />
-                <span className="text-2xl font-black tracking-wider text-primary">{pendingData?.whatsapp}</span>
+            <AlertDialogDescription asChild className="text-center pt-2">
+              <div className="text-sm text-muted-foreground">
+                Apakah nomor WhatsApp Anda sudah benar?
+                <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/20 flex items-center justify-center gap-3">
+                  <Phone className="w-5 h-5 text-primary" />
+                  <span className="text-2xl font-black tracking-wider text-primary">{pendingData?.whatsapp}</span>
+                </div>
+                <div className="mt-3 text-[11px] leading-relaxed">
+                  Kami akan mengirimkan <strong>Link Zoom</strong> ke nomor ini saat giliran Anda tiba. Pastikan nomor aktif.
+                </div>
               </div>
-              <p className="mt-3 text-[11px] leading-relaxed">
-                Kami akan mengirimkan <strong>Link Zoom</strong> ke nomor ini saat giliran Anda tiba. Pastikan nomor aktif.
-              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-col gap-2 sm:flex-col mt-4">
