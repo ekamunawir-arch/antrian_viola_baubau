@@ -85,7 +85,8 @@ export default function ParticipantIntake() {
       waiting: participants.filter(p => p.status === 'Waiting').length,
       served: participants.filter(p => p.status === 'Finished').length,
       absent: 0, 
-      current: participants.filter(p => p.status === 'Being Served'),
+      // Ambil 3 antrian yang sedang dilayani agar tidak memanjangkan layar
+      current: participants.filter(p => p.status === 'Being Served').slice(0, 3),
       lastFinished: [...participants].reverse().find(p => p.status === 'Finished') || null
     });
   };
@@ -111,7 +112,6 @@ export default function ParticipantIntake() {
   });
 
   const onSubmit = (values: FormValues) => {
-    // Step 1: Trigger confirmation popup instead of immediate registration
     setPendingData(values);
     setShowConfirm(true);
   };
@@ -141,73 +141,72 @@ export default function ParticipantIntake() {
   const remainingQuota = Math.max(0, dailyQuota - queueInfo.total);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col font-body">
-      {/* Header Bar */}
-      <header className="bg-[#005a78] text-white p-4 flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="bg-white text-[#005a78] p-1.5 rounded-lg font-black text-xl">Q</div>
+    <div className="min-h-screen bg-background flex flex-col font-body overflow-hidden">
+      {/* Header Bar - Dibuat lebih tipis */}
+      <header className="bg-[#005a78] text-white p-3 flex justify-between items-center shadow-md shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="bg-white text-[#005a78] p-1 rounded-lg font-black text-lg">Q</div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">Sistem Antrian VIOLA</h1>
-            <p className="text-[10px] opacity-70 uppercase tracking-widest">Layanan Online</p>
+            <h1 className="font-bold text-base leading-tight">Sistem Antrian VIOLA</h1>
+            <p className="text-[9px] opacity-70 uppercase tracking-widest">Layanan Online</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => router.push('/')} className="bg-sky-900 hover:bg-sky-800 text-white border-none rounded-lg h-10 px-4">
-            <Home className="w-4 h-4 mr-2" /> Beranda
+          <Button variant="secondary" size="sm" onClick={() => router.push('/')} className="bg-sky-900 hover:bg-sky-800 text-white border-none rounded-lg h-8 px-3 text-xs">
+            <Home className="w-3.5 h-3.5 mr-1" /> Beranda
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/admin')} className="text-white hover:bg-white/10 rounded-lg h-10">
-            <Settings className="w-4 h-4 mr-2" /> Admin
+          <Button variant="ghost" size="sm" onClick={() => router.push('/admin')} className="text-white hover:bg-white/10 rounded-lg h-8 text-xs">
+            <Settings className="w-3.5 h-3.5 mr-1" /> Admin
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-8 md:py-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <main className="flex-1 container mx-auto px-4 py-4 md:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start overflow-hidden">
         
         {/* Left Column: Form or Success */}
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 h-full">
           {step === 'form' ? (
-            <Card className="shadow-2xl border-none rounded-3xl overflow-hidden bg-white">
-              <CardHeader className="text-center pt-10 pb-6 space-y-3">
-                <CardTitle className="text-4xl font-black text-[#005a78] leading-tight">
+            <Card className="shadow-xl border-none rounded-2xl overflow-hidden bg-white h-fit max-h-full">
+              <CardHeader className="text-center pt-6 pb-4 space-y-2">
+                <CardTitle className="text-3xl font-black text-[#005a78] leading-tight">
                   Selamat Datang di <span className="text-primary">Layanan VIOLA</span>
                 </CardTitle>
-                <div className="space-y-4">
-                  <CardDescription className="text-lg font-bold text-primary tracking-widest uppercase">
+                <div className="space-y-3">
+                  <CardDescription className="text-sm font-bold text-primary tracking-widest uppercase">
                     Sistem Antrian Online
                   </CardDescription>
                   
-                  {/* Sisa Kuota Highlight - Orange/Yellow Amber Theme */}
-                  <div className="bg-amber-100 border-2 border-amber-300 py-3 px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-md animate-pulse duration-[3000ms]">
-                    <Ticket className="w-6 h-6 text-amber-600" />
+                  <div className="bg-amber-100 border-2 border-amber-300 py-2 px-4 rounded-xl w-fit mx-auto flex items-center gap-2 shadow-sm">
+                    <Ticket className="w-5 h-5 text-amber-600" />
                     <div className="text-left">
-                      <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Sisa Kuota Hari Ini</p>
-                      <p className="text-3xl font-black text-amber-700 leading-none">
-                        {remainingQuota} <span className="text-xs font-bold text-amber-800 uppercase">Antrian</span>
+                      <p className="text-[9px] font-black text-amber-900 uppercase tracking-widest leading-none mb-0.5">Sisa Kuota Hari Ini</p>
+                      <p className="text-2xl font-black text-amber-700 leading-none">
+                        {remainingQuota} <span className="text-[10px] font-bold text-amber-800 uppercase">Antrian</span>
                       </p>
                     </div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="px-8 pb-10">
+              <CardContent className="px-6 pb-6">
                 {isFull ? (
-                  <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-8 text-center space-y-4">
-                    <AlertCircle className="w-16 h-16 text-rose-500 mx-auto" />
-                    <h3 className="text-2xl font-black text-rose-700">Kuota Hari Ini Penuh</h3>
-                    <p className="text-rose-600 font-medium">Mohon maaf, kuota harian telah mencapai batas. Silakan coba lagi besok.</p>
+                  <div className="bg-rose-50 border-2 border-rose-100 rounded-xl p-6 text-center space-y-3">
+                    <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
+                    <h3 className="text-xl font-black text-rose-700">Kuota Hari Ini Penuh</h3>
+                    <p className="text-rose-600 text-sm font-medium">Mohon maaf, silakan coba lagi besok.</p>
                   </div>
                 ) : (
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                       <FormField
                         control={form.control}
                         name="fullName"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base font-bold text-[#005a78]">Nama :</FormLabel>
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-sm font-bold text-[#005a78]">Nama :</FormLabel>
                             <FormControl>
-                              <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200" placeholder="Masukkan nama Anda" {...field} />
+                              <Input className="h-11 px-4 text-base rounded-lg bg-slate-50 border-slate-200" placeholder="Masukkan nama Anda" {...field} />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-[11px]" />
                           </FormItem>
                         )}
                       />
@@ -216,25 +215,25 @@ export default function ParticipantIntake() {
                         control={form.control}
                         name="whatsapp"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base font-bold text-[#005a78]">Nomor WhatsApp :</FormLabel>
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-sm font-bold text-[#005a78]">Nomor WhatsApp :</FormLabel>
                             <FormControl>
-                              <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200" placeholder="0812XXXXXXXX" {...field} />
+                              <Input className="h-11 px-4 text-base rounded-lg bg-slate-50 border-slate-200" placeholder="0812XXXXXXXX" {...field} />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-[11px]" />
                           </FormItem>
                         )}
                       />
 
-                      <div className="space-y-4">
-                        <FormLabel className="text-base font-bold text-[#005a78]">Jenis <span className="text-primary">Layanan</span></FormLabel>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="space-y-2">
+                        <FormLabel className="text-sm font-bold text-[#005a78]">Jenis Layanan</FormLabel>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                           {['Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan'].map((type) => (
                             <Button
                               key={type}
                               type="button"
                               variant={form.watch('serviceType') === type ? 'default' : 'outline'}
-                              className={`h-auto py-4 px-2 text-sm font-bold rounded-xl border-2 transition-all text-center leading-tight ${
+                              className={`h-auto py-2 px-1 text-[11px] font-bold rounded-lg border-2 transition-all text-center leading-tight ${
                                 form.watch('serviceType') === type 
                                 ? 'bg-[#005a78] border-[#005a78] text-white' 
                                 : 'border-[#005a78] text-[#005a78] hover:bg-slate-50'
@@ -247,7 +246,7 @@ export default function ParticipantIntake() {
                         </div>
                       </div>
 
-                      <Button type="submit" className="w-full h-16 text-xl font-black bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20 transition-all uppercase tracking-widest">
+                      <Button type="submit" className="w-full h-12 text-lg font-black bg-primary hover:bg-primary/90 rounded-xl shadow-md transition-all uppercase tracking-widest mt-2">
                         Ambil Nomor Antrian
                       </Button>
                     </form>
@@ -256,44 +255,35 @@ export default function ParticipantIntake() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="shadow-2xl border-none rounded-3xl overflow-hidden bg-white animate-in zoom-in duration-300">
-              <CardContent className="p-12 text-center space-y-8">
-                <div className="bg-emerald-100 p-6 rounded-full w-fit mx-auto">
-                  <CheckCircle2 className="w-20 h-20 text-emerald-600" />
+            <Card className="shadow-2xl border-none rounded-2xl overflow-hidden bg-white animate-in zoom-in duration-300">
+              <CardContent className="p-8 text-center space-y-6">
+                <div className="bg-emerald-100 p-4 rounded-full w-fit mx-auto">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-600" />
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-4xl font-black text-[#005a78]">Nomor Antrian Anda</h2>
-                  <p className="text-muted-foreground font-medium">Pendaftaran berhasil, silakan simpan nomor ini.</p>
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black text-[#005a78]">Nomor Antrian Anda</h2>
+                  <p className="text-xs text-muted-foreground font-medium">Pendaftaran berhasil, silakan simpan nomor ini.</p>
                 </div>
                 
-                <div className="bg-slate-50 rounded-3xl p-10 space-y-4 border-2 border-dashed border-primary/30">
-                  <span className="text-8xl font-black text-primary tracking-tighter block">{finalQueue?.queueNumber}</span>
-                  <Badge className="bg-[#005a78] text-white px-6 py-2 text-lg font-bold rounded-full uppercase tracking-widest">
+                <div className="bg-slate-50 rounded-2xl p-6 space-y-2 border-2 border-dashed border-primary/30">
+                  <span className="text-6xl font-black text-primary tracking-tighter block">{finalQueue?.queueNumber}</span>
+                  <Badge className="bg-[#005a78] text-white px-4 py-1 text-sm font-bold rounded-full uppercase">
                     {finalQueue?.serviceType}
                   </Badge>
                 </div>
 
-                {/* WhatsApp Confirmation Alert */}
-                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-4">
-                  <div className="flex items-center gap-3 justify-center text-primary">
-                    <MessageSquare className="w-6 h-6" />
-                    <span className="font-bold text-lg">Konfirmasi WhatsApp</span>
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-2 justify-center text-primary">
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="font-bold text-sm">Konfirmasi WhatsApp</span>
                   </div>
-                  <p className="text-sm text-slate-600">
-                    Mohon pastikan nomor WhatsApp <span className="font-black text-[#005a78] underline">{finalQueue?.whatsapp}</span> Anda aktif dan benar. 
-                    <br /><span className="font-bold">Link Zoom</span> layanan akan dikirimkan ke nomor tersebut saat Anda dipanggil oleh petugas.
+                  <p className="text-[11px] text-slate-600 leading-tight">
+                    Link Zoom akan dikirimkan ke <span className="font-black text-[#005a78]">{finalQueue?.whatsapp}</span> saat Anda dipanggil.
                   </p>
-                  <div className="flex items-start gap-2 text-left bg-white/50 p-3 rounded-xl">
-                    <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-muted-foreground">Satu nomor WhatsApp hanya dapat mengambil satu nomor antrian per hari.</p>
-                  </div>
                 </div>
 
-                <div className="space-y-4 pt-4">
-                  <p className="text-sm text-muted-foreground italic font-medium">
-                    "Mohon bersiap di area tunggu. Panggilan akan dilakukan sesuai urutan nomor."
-                  </p>
-                  <Button variant="outline" onClick={() => setStep('form')} className="w-full h-14 rounded-xl text-lg font-bold border-2">
+                <div className="space-y-3 pt-2">
+                  <Button variant="outline" onClick={() => setStep('form')} className="w-full h-10 rounded-lg text-sm font-bold border-2">
                     Ambil Antrian Baru
                   </Button>
                 </div>
@@ -302,74 +292,74 @@ export default function ParticipantIntake() {
           )}
         </div>
 
-        {/* Right Column: Queue Information */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="space-y-1">
-            <h2 className="text-3xl font-black text-[#005a78] font-headline">Informasi Antrian Hari Ini</h2>
-            <p className="text-muted-foreground font-medium">
-              {mounted ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()) : '...'}
+        {/* Right Column: Queue Information - Dibuat Lebih Ringkas */}
+        <div className="lg:col-span-5 space-y-4 h-full overflow-hidden">
+          <div className="space-y-0.5">
+            <h2 className="text-2xl font-black text-[#005a78] font-headline">Informasi Antrian</h2>
+            <p className="text-xs text-muted-foreground font-medium">
+              {mounted ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()) : '...'}
             </p>
-            <Badge variant="outline" className="mt-2 bg-white/50 border-none flex w-fit gap-2 py-1.5 px-3">
-              <RefreshCcw className="w-3 h-3 text-primary animate-spin" style={{ animationDuration: '3s' }} />
-              <span className="text-xs">Refresh dalam 30 detik</span>
+            <Badge variant="outline" className="mt-1 bg-white/50 border-none flex w-fit gap-2 py-1 px-2">
+              <RefreshCcw className="w-2.5 h-2.5 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+              <span className="text-[9px]">Refresh 30s</span>
             </Badge>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <Card className="bg-white/40 border-none shadow-sm overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 text-primary mb-2">
-                  <RefreshCcw className="w-5 h-5" />
-                  <span className="font-bold text-sm uppercase tracking-wider">Sedang Diproses</span>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-primary mb-3">
+                  <RefreshCcw className="w-4 h-4" />
+                  <span className="font-bold text-[10px] uppercase tracking-wider">Sedang Diproses (Maks. 3)</span>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {queueInfo.current.length > 0 ? (
                     queueInfo.current.map((p) => (
                       <div key={p.id} className="flex items-center justify-between border-b border-primary/10 pb-2 last:border-0 last:pb-0">
-                        <span className="text-4xl font-black text-[#005a78]">{p.queueNumber}</span>
+                        <span className="text-3xl font-black text-[#005a78]">{p.queueNumber}</span>
                         <div className="text-right">
-                          <span className="font-bold text-lg block">{p.fullName}</span>
-                          <Badge variant="outline" className="text-[10px] font-bold uppercase py-0">{p.serviceType}</Badge>
+                          <span className="font-bold text-sm block truncate max-w-[150px]">{p.fullName}</span>
+                          <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 h-4">{p.serviceType}</Badge>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted-foreground italic text-sm">Tidak ada antrian yang sedang diproses</p>
+                    <p className="text-muted-foreground italic text-[11px]">Belum ada antrian aktif</p>
                   )}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-emerald-50/40 border-none shadow-sm overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 text-emerald-600 mb-2">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-bold text-sm uppercase tracking-wider">Terakhir Selesai</span>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-emerald-600 mb-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-bold text-[10px] uppercase tracking-wider">Terakhir Selesai</span>
                 </div>
                 {queueInfo.lastFinished ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-3xl font-black text-emerald-700">{queueInfo.lastFinished.queueNumber}</span>
-                    <span className="font-bold">{queueInfo.lastFinished.fullName}</span>
+                    <span className="text-2xl font-black text-emerald-700">{queueInfo.lastFinished.queueNumber}</span>
+                    <span className="font-bold text-sm truncate max-w-[150px]">{queueInfo.lastFinished.fullName}</span>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground italic text-sm">Belum ada antrian selesai</p>
+                  <p className="text-muted-foreground italic text-[11px]">Belum ada</p>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             {[
-              { label: 'Total', value: `${queueInfo.total}/${dailyQuota}`, icon: Users, color: 'text-blue-600' },
-              { label: 'Menunggu', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
-              { label: 'Selesai', value: queueInfo.served, icon: CheckCircle2, color: 'text-emerald-600' },
-              { label: 'Absen', value: queueInfo.absent, icon: XCircle, color: 'text-rose-500' },
+              { label: 'Total', value: `${queueInfo.total}`, icon: Users, color: 'text-blue-600' },
+              { label: 'Tunggu', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
+              { label: 'Lulus', value: queueInfo.served, icon: CheckCircle2, color: 'text-emerald-600' },
+              { label: 'Absen', value: '0', icon: XCircle, color: 'text-rose-500' },
             ].map((stat, i) => (
               <Card key={i} className="bg-white border-none shadow-sm text-center">
-                <CardContent className="p-4 flex flex-col items-center gap-2">
-                  <stat.icon className={`w-5 h-5 ${stat.color} opacity-70`} />
-                  <span className={`text-xl font-black ${stat.color}`}>{stat.value}</span>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{stat.label}</span>
+                <CardContent className="p-2 flex flex-col items-center gap-1">
+                  <stat.icon className={`w-3.5 h-3.5 ${stat.color} opacity-70`} />
+                  <span className={`text-base font-black ${stat.color}`}>{stat.value}</span>
+                  <span className="text-[8px] uppercase font-bold text-muted-foreground">{stat.label}</span>
                 </CardContent>
               </Card>
             ))}
@@ -391,7 +381,7 @@ export default function ParticipantIntake() {
                   <span className="text-2xl font-black tracking-wider text-primary">{pendingData?.whatsapp}</span>
                 </div>
                 <div className="mt-3 text-[11px] leading-relaxed">
-                  Kami akan mengirimkan <strong>Link Zoom</strong> ke nomor ini saat giliran Anda tiba. Pastikan nomor aktif.
+                  Pastikan nomor aktif untuk menerima <strong>Link Zoom</strong>.
                 </div>
               </div>
             </AlertDialogDescription>
@@ -410,9 +400,9 @@ export default function ParticipantIntake() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Footer Bar */}
-      <footer className="bg-emerald-500 text-white p-4 text-center font-bold tracking-wide shadow-inner mt-auto">
-        Sistem Antrian Layanan VIOLA Virtual Office Online
+      {/* Footer Bar - Dibuat lebih tipis */}
+      <footer className="bg-emerald-500 text-white p-2 text-center text-[10px] font-bold tracking-wide shadow-inner mt-auto shrink-0">
+        VIOLA Virtual Office Online © 2024
       </footer>
       <Toaster />
     </div>
