@@ -137,6 +137,8 @@ export default function AdminDashboard() {
     document.body.removeChild(link);
   };
 
+  const beingServedList = participants.filter(p => p.status === 'Being Served');
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -272,15 +274,17 @@ export default function AdminDashboard() {
               <CardHeader>
                 <CardTitle className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Sedang Dilayani</CardTitle>
               </CardHeader>
-              <CardContent>
-                {participants.find(p => p.status === 'Being Served') ? (
-                  <div className="space-y-3">
-                    <div className="text-5xl font-black text-primary">{participants.find(p => p.status === 'Being Served')?.queueNumber}</div>
-                    <div className="font-bold text-xl">{participants.find(p => p.status === 'Being Served')?.fullName}</div>
-                    <div className="text-xs font-bold text-muted-foreground bg-muted p-2 rounded-lg uppercase">
-                      {participants.find(p => p.status === 'Being Served')?.serviceType}
+              <CardContent className="space-y-6">
+                {beingServedList.length > 0 ? (
+                  beingServedList.map((p) => (
+                    <div key={p.id} className="space-y-2 pb-4 border-b last:border-0 last:pb-0">
+                      <div className="text-5xl font-black text-primary">{p.queueNumber}</div>
+                      <div className="font-bold text-xl leading-tight">{p.fullName}</div>
+                      <div className="text-xs font-bold text-muted-foreground bg-muted p-2 rounded-lg uppercase w-fit">
+                        {p.serviceType}
+                      </div>
                     </div>
-                  </div>
+                  ))
                 ) : (
                   <div className="text-muted-foreground italic text-sm">Tidak ada yang sedang dilayani.</div>
                 )}
