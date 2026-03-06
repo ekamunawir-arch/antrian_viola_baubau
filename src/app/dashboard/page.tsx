@@ -44,7 +44,7 @@ export default function PublicDashboard() {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Batasi daftar yang sedang dilayani agar tidak memanjangkan layar (maks 3)
+  // Batasi daftar yang sedang dilayani agar layar tidak scroll (maks 3)
   const beingServedList = participants.filter(p => p.status === 'Being Served').slice(0, 3);
   // Batasi daftar selesai (maks 4)
   const finishedParticipants = participants.filter(p => p.status === 'Finished').slice(-4).reverse();
@@ -52,136 +52,136 @@ export default function PublicDashboard() {
   const totalToday = participants.length;
 
   return (
-    <div className="h-screen bg-background p-4 md:p-6 flex flex-col gap-4 overflow-hidden">
-      {/* Header - Dibuat lebih ringkas */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-md border-b-4 border-b-primary shrink-0">
-        <div className="space-y-0.5">
-          <h1 className="text-3xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
-          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">Virtual Office Layanan Peserta</p>
+    <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden">
+      {/* Header - Kembali ke ukuran normal */}
+      <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
+        <div className="space-y-1">
+          <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
+          <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.5em]">Virtual Office Layanan Peserta</p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-black tabular-nums leading-none">
+          <div className="text-4xl font-black tabular-nums leading-none">
             {currentTime ? currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
           </div>
-          <div className="text-[9px] font-bold text-muted-foreground uppercase mt-1">
+          <div className="text-sm font-bold text-muted-foreground uppercase mt-2 tracking-widest">
             {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '...'}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
         {/* Main Panel: Video Player */}
-        <div className="lg:col-span-8 flex flex-col gap-4 min-h-0">
-          <Card className="flex-1 bg-black shadow-xl border-none overflow-hidden relative group">
+        <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
+          <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900">
               <div className="w-full h-full flex flex-col items-center justify-center text-white/10">
-                <MonitorPlay className="w-24 h-24 mb-3" />
-                <p className="text-sm font-bold uppercase tracking-[0.3em]">Saluran Multimedia VIOLA</p>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
-                  <div className="flex items-center gap-3 text-white">
-                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Siaran Langsung Informasi</span>
+                <MonitorPlay className="w-32 h-32 mb-6" />
+                <p className="text-xl font-black uppercase tracking-[0.5em]">Saluran Multimedia VIOLA</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-10">
+                  <div className="flex items-center gap-4 text-white">
+                    <div className="w-4 h-4 bg-red-600 rounded-full animate-pulse" />
+                    <span className="text-sm font-black uppercase tracking-widest">Siaran Langsung Informasi & Edukasi</span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Bottom Bar: Queue Summary - Lebih ringkas */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-dashed border-primary/30 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg">
-                <ArrowRightCircle className="w-6 h-6 text-primary" />
+          {/* Bottom Bar: Queue Summary - Ukuran Normal */}
+          <div className="bg-white p-6 rounded-3xl shadow-md border-2 border-dashed border-primary/30 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-6">
+              <div className="bg-primary/10 p-4 rounded-2xl">
+                <ArrowRightCircle className="w-10 h-10 text-primary" />
               </div>
               <div>
-                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Berikutnya</p>
+                <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-1">Berikutnya</p>
                 {nextInQueue ? (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-black text-primary leading-none">{nextInQueue.queueNumber}</span>
-                    <span className="text-base font-bold text-slate-700 truncate max-w-[120px] leading-none">{nextInQueue.fullName}</span>
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-5xl font-black text-primary leading-none">{nextInQueue.queueNumber}</span>
+                    <span className="text-2xl font-bold text-slate-700 truncate max-w-[250px] leading-none">{nextInQueue.fullName}</span>
                   </div>
                 ) : (
-                  <span className="text-sm font-bold text-muted-foreground italic">Kosong</span>
+                  <span className="text-xl font-bold text-muted-foreground italic">Belum Ada Antrian</span>
                 )}
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Total Hari Ini</p>
-              <p className="text-3xl font-black text-primary leading-none">{totalToday}<span className="text-sm text-muted-foreground">/20</span></p>
+              <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-1">Total Antrian Hari Ini</p>
+              <p className="text-5xl font-black text-primary leading-none">{totalToday}<span className="text-xl text-muted-foreground ml-2">/20</span></p>
             </div>
           </div>
         </div>
 
-        {/* Sidebar: Information Panels - Batasi agar tidak scroll */}
-        <div className="lg:col-span-4 flex flex-col gap-4 min-h-0">
+        {/* Sidebar: Information Panels - Ukuran Normal */}
+        <div className="lg:col-span-4 flex flex-col gap-6 min-h-0">
           
           {/* Part 1: Currently Serving */}
-          <Card className="bg-white shadow-md border-t-4 border-t-primary overflow-hidden flex flex-col shrink-0 max-h-[45%]">
-            <div className="bg-primary/5 p-3 border-b flex items-center gap-2 shrink-0">
-              <PlayCircle className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-black font-headline tracking-tight uppercase">Sedang Dilayani</h2>
+          <Card className="bg-white shadow-xl border-t-8 border-t-primary overflow-hidden flex flex-col shrink-0">
+            <div className="bg-primary/5 p-4 border-b flex items-center gap-3 shrink-0">
+              <PlayCircle className="w-6 h-6 text-primary" />
+              <h2 className="text-lg font-black font-headline tracking-tight uppercase">Sedang Dilayani</h2>
             </div>
-            <CardContent className="p-3 space-y-3 overflow-hidden">
+            <CardContent className="p-4 space-y-4 overflow-hidden">
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2 p-2.5 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-lg shadow-sm">
-                    <div className="bg-white/10 text-white w-10 h-10 rounded-lg flex items-center justify-center text-xl font-black shrink-0 border border-white/20">
+                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg transform hover:scale-[1.02] transition-all">
+                    <div className="bg-white/10 text-white w-16 h-16 rounded-xl flex items-center justify-center text-3xl font-black shrink-0 border border-white/20">
                       {p.queueNumber}
                     </div>
                     <div className="flex-1 overflow-hidden">
-                      <div className="flex justify-between items-center mb-0.5">
-                        <p className="text-[12px] font-bold truncate leading-tight">{p.fullName}</p>
-                        <Badge className="bg-white/20 text-white text-[7px] font-black uppercase border-none py-0 h-3.5">
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-lg font-bold truncate leading-none">{p.fullName}</p>
+                        <Badge className="bg-white/20 text-white text-[10px] font-black uppercase border-none">
                           {p.serviceType.split(' ')[0]}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between text-[9px] font-black">
-                        <span className="flex items-center gap-0.5 opacity-80">
-                          <User className="w-2.5 h-2.5" /> {p.staffName?.split(' ')[0]}
+                      <div className="flex items-center justify-between text-xs font-black">
+                        <span className="flex items-center gap-1 opacity-80">
+                          <User className="w-4 h-4" /> {p.staffName || 'Petugas'}
                         </span>
                         <span className="text-sky-300">
-                          <Clock className="w-2.5 h-2.5 inline mr-0.5" /> {calculateDuration(p.serveStartTime || '', currentTime)}
+                          <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.serveStartTime || '', currentTime)}
                         </span>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="py-8 text-center opacity-20">
-                  <Users className="w-8 h-8 mx-auto mb-1" />
-                  <p className="text-[10px] font-bold uppercase">Menunggu</p>
+                <div className="py-12 text-center opacity-20">
+                  <Users className="w-16 h-16 mx-auto mb-2" />
+                  <p className="text-xs font-black uppercase tracking-widest">Menunggu Aktivitas</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Part 2: Recently Finished */}
-          <Card className="flex-1 bg-white shadow-md border-none overflow-hidden flex flex-col min-h-0">
-            <div className="bg-slate-50 p-3 border-b flex items-center gap-2 shrink-0">
-              <ListChecks className="w-4 h-4 text-slate-500" />
-              <h2 className="text-sm font-black font-headline tracking-tight uppercase">Selesai</h2>
+          <Card className="flex-1 bg-white shadow-xl border-none overflow-hidden flex flex-col min-h-0">
+            <div className="bg-slate-50 p-4 border-b flex items-center gap-3 shrink-0">
+              <ListChecks className="w-6 h-6 text-slate-500" />
+              <h2 className="text-lg font-black font-headline tracking-tight uppercase">Antrian Selesai</h2>
             </div>
-            <CardContent className="p-3 space-y-2 overflow-y-auto">
+            <CardContent className="p-4 space-y-3 overflow-y-auto">
               {finishedParticipants.length > 0 ? (
                 finishedParticipants.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="bg-primary/10 text-primary w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black shrink-0">
+                  <div key={p.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black shrink-0">
                       {p.queueNumber}
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-start">
-                        <p className="text-[11px] font-bold truncate leading-tight">{p.fullName}</p>
-                        <span className="text-[10px] font-black text-emerald-600 ml-2">
+                        <p className="text-base font-bold truncate leading-none">{p.fullName}</p>
+                        <span className="text-xs font-black text-emerald-600">
                            {calculateDuration(p.serveStartTime || '', p.serveEndTime || null)}
                         </span>
                       </div>
-                      <p className="text-[8px] font-black text-muted-foreground uppercase mt-0.5">{p.serviceType}</p>
+                      <p className="text-[10px] font-black text-muted-foreground uppercase mt-1 tracking-wider">{p.serviceType}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground font-bold text-[10px] opacity-30 uppercase tracking-widest">
-                  Belum Ada
+                <div className="text-center py-12 text-muted-foreground font-bold text-xs opacity-30 uppercase tracking-[0.3em]">
+                  Belum Ada Data
                 </div>
               )}
             </CardContent>
