@@ -61,6 +61,7 @@ export default function ParticipantIntake() {
   const [isFull, setIsFull] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [dailyQuota, setDailyQuota] = useState(20);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // States for confirmation dialog
   const [showConfirm, setShowConfirm] = useState(false);
@@ -93,10 +94,8 @@ export default function ParticipantIntake() {
   useEffect(() => {
     setMounted(true);
     updateQueueInfo();
-    const interval = setInterval(updateQueueInfo, 30000);
     window.addEventListener('viola_storage_update', updateQueueInfo);
     return () => {
-      clearInterval(interval);
       window.removeEventListener('viola_storage_update', updateQueueInfo);
     };
   }, []);
@@ -115,10 +114,11 @@ export default function ParticipantIntake() {
     setShowConfirm(true);
   };
 
-  const handleFinalSubmit = () => {
-    if (!pendingData) return;
+  const handleFinalSubmit = async () => {
+    if (!pendingData || isSubmitting) return;
+    setIsSubmitting(true);
 
-    const result = addParticipant({
+    const result = await addParticipant({
       fullName: pendingData.fullName,
       whatsapp: pendingData.whatsapp,
       serviceType: pendingData.serviceType as ServiceType
@@ -133,6 +133,7 @@ export default function ParticipantIntake() {
       toast({ variant: "destructive", title: "Pendaftaran Gagal", description: result.error || "Terjadi kesalahan." });
     }
     
+    setIsSubmitting(false);
     setShowConfirm(false);
     setPendingData(null);
   };
@@ -245,8 +246,8 @@ export default function ParticipantIntake() {
                         </div>
                       </div>
 
-                      <Button type="submit" className="w-full h-16 text-xl font-black bg-primary hover:bg-primary/90 rounded-2xl shadow-xl transition-all hover:scale-[1.01] active:scale-[0.98] uppercase tracking-widest">
-                        Ambil Nomor Antrian
+                      <Button type="submit" disabled={isSubmitting} className="w-full h-16 text-xl font-black bg-primary hover:bg-primary/90 rounded-2xl shadow-xl transition-all hover:scale-[1.01] active:scale-[0.98] uppercase tracking-widest">
+                        {isSubmitting ? 'Memproses...' : 'Ambil Nomor Antrian'}
                       </Button>
                     </form>
                   </Form>
@@ -302,7 +303,7 @@ export default function ParticipantIntake() {
             </div>
             <Badge variant="outline" className="mb-1 bg-white border-none shadow-sm flex gap-2 py-1.5 px-3">
               <RefreshCcw className="w-3 h-3 text-primary animate-spin" style={{ animationDuration: '3s' }} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Auto Refresh</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Live Sync</span>
             </Badge>
           </div>
 
@@ -400,11 +401,12 @@ export default function ParticipantIntake() {
           <AlertDialogFooter className="flex flex-col gap-3 mt-8 sm:flex-col sm:space-x-0">
             <AlertDialogAction 
               onClick={handleFinalSubmit}
+              disabled={isSubmitting}
               className="w-full h-14 bg-primary hover:bg-primary/90 rounded-2xl font-black text-lg shadow-xl hover:scale-[1.02] transition-all active:scale-[0.98] border-none"
             >
-              Ya, Sudah Benar
+              {isSubmitting ? 'Memproses...' : 'Ya, Sudah Benar'}
             </AlertDialogAction>
-            <AlertDialogCancel className="w-full h-14 bg-slate-50 hover:bg-slate-100 border-none rounded-2xl font-bold text-slate-500 transition-all hover:text-slate-700">
+            <AlertDialogCancel disabled={isSubmitting} className="w-full h-14 bg-slate-50 hover:bg-slate-100 border-none rounded-2xl font-bold text-slate-500 transition-all hover:text-slate-700">
               Ubah Nomor
             </AlertDialogCancel>
           </AlertDialogFooter>
