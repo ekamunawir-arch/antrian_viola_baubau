@@ -123,20 +123,22 @@ export default function PublicDashboard() {
             <CardContent className="p-4 space-y-4">
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
-                  <div key={p.id} className="flex flex-col gap-2 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-md animate-in fade-in zoom-in duration-300">
-                    <div className="flex justify-between items-start">
-                      <div className="text-5xl font-black leading-none">{p.queueNumber}</div>
-                      <Badge className="bg-white/20 text-white text-[9px] font-black uppercase border-none">
-                        {p.serviceType}
-                      </Badge>
+                  <div key={p.id} className="flex items-center gap-3 p-3 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-xl shadow-md animate-in fade-in zoom-in duration-300">
+                    <div className="bg-white/10 text-white w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black shrink-0 border border-white/20">
+                      {p.queueNumber}
                     </div>
-                    <div className="space-y-1 mt-1">
-                      <div className="text-lg font-black tracking-tight truncate">{p.fullName}</div>
-                      <div className="flex items-center justify-between text-[10px] opacity-70 font-bold uppercase">
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <p className="text-base font-bold truncate leading-tight">{p.fullName}</p>
+                        <Badge className="bg-white/20 text-white text-[8px] font-black uppercase border-none py-0 px-1.5 h-4">
+                          {p.serviceType}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] opacity-90 font-bold uppercase">
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" /> {p.staffName || 'Petugas'}
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 font-black text-sky-300">
                           <Clock className="w-3 h-3" /> Durasi: {calculateDuration(p.serveStartTime || '', currentTime)}
                         </span>
                       </div>
@@ -162,16 +164,16 @@ export default function PublicDashboard() {
               <div className="space-y-3">
                 {finishedParticipants.length > 0 ? (
                   finishedParticipants.map((p) => (
-                    <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl animate-in slide-in-from-right-4 duration-300">
+                    <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl animate-in slide-in-from-right-4 duration-300 border border-slate-100">
                       <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black shrink-0 border border-primary/20">
                         {p.queueNumber}
                       </div>
                       <div className="flex-1 overflow-hidden">
                         <p className="text-sm font-bold truncate leading-tight">{p.fullName}</p>
-                        <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[8px] font-bold text-muted-foreground uppercase">{p.serviceType}</span>
-                          <span className="text-[8px] font-black text-emerald-600 uppercase flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5" /> {calculateDuration(p.serveStartTime || '', p.serveEndTime || null)}
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">{p.serviceType}</span>
+                          <span className="text-[11px] font-black text-emerald-600 uppercase flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {calculateDuration(p.serveStartTime || '', p.serveEndTime || null)}
                           </span>
                         </div>
                       </div>
