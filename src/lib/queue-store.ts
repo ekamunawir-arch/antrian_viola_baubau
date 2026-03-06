@@ -110,7 +110,16 @@ Link Zoom:
 ${zoomLink}
 `;
 
-    sendWhatsAppMessage(newParticipant.whatsapp, message);
+    fetch("/api/send-whatsapp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phone: newParticipant.whatsapp,
+        message: message,
+      }),
+    });
   } catch (error) {
     console.error("WhatsApp notification failed:", error);
   }
