@@ -58,7 +58,7 @@ export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 't
   
   if (participants.length >= dailyQuota) return null;
 
-  // Penomoran berdasarkan jenis layanan
+  // Pilihan prefix berdasarkan jenis layanan
   const prefixMap: Record<ServiceType, string> = {
     'Pendaftaran Peserta': 'A',
     'Perubahan data': 'B',
@@ -66,9 +66,10 @@ export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 't
   };
 
   const prefix = prefixMap[data.serviceType as ServiceType];
-  const countInType = participants.filter(p => p.serviceType === data.serviceType).length;
-  const nextNumberInType = countInType + 1;
-  const queueNumber = `${prefix}-${nextNumberInType.toString().padStart(2, '0')}`;
+  
+  // Menggunakan nomor urut global agar tidak ada nomor yang sama
+  const nextGlobalNumber = participants.length + 1;
+  const queueNumber = `${prefix}-${nextGlobalNumber.toString().padStart(2, '0')}`;
   
   const newParticipant: Participant = {
     ...data,
