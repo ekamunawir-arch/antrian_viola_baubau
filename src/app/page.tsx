@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -43,6 +44,7 @@ export default function ParticipantIntake() {
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [finalQueue, setFinalQueue] = useState<Participant | null>(null);
   const [isFull, setIsFull] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [queueInfo, setQueueInfo] = useState({
     total: 0,
     waiting: 0,
@@ -66,6 +68,7 @@ export default function ParticipantIntake() {
   };
 
   useEffect(() => {
+    setMounted(true);
     updateQueueInfo();
     const interval = setInterval(updateQueueInfo, 30000);
     return () => clearInterval(interval);
@@ -236,7 +239,7 @@ export default function ParticipantIntake() {
           <div className="space-y-1">
             <h2 className="text-3xl font-black text-[#005a78] font-headline">Informasi Antrian Hari Ini</h2>
             <p className="text-muted-foreground font-medium">
-              {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}
+              {mounted ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()) : '...'}
             </p>
             <Badge variant="outline" className="mt-2 bg-white/50 border-none flex w-fit gap-2 py-1.5 px-3">
               <RefreshCcw className="w-3 h-3 text-primary animate-spin" style={{ animationDuration: '3s' }} />

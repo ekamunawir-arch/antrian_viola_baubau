@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay } f
 
 export default function PublicDashboard() {
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   const fetchData = () => {
     const data = getQueueData();
@@ -17,7 +18,10 @@ export default function PublicDashboard() {
   };
 
   useEffect(() => {
+    // Set initial time only on client
+    setCurrentTime(new Date());
     fetchData();
+    
     const interval = setInterval(() => {
       fetchData();
       setCurrentTime(new Date());
@@ -44,8 +48,12 @@ export default function PublicDashboard() {
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Virtual Office Layanan Peserta</p>
         </div>
         <div className="text-right">
-          <div className="text-3xl font-black tabular-nums">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-          <div className="text-sm font-bold text-muted-foreground uppercase">{currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          <div className="text-3xl font-black tabular-nums">
+            {currentTime ? currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </div>
+          <div className="text-sm font-bold text-muted-foreground uppercase">
+            {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '...'}
+          </div>
         </div>
       </div>
 
@@ -54,7 +62,6 @@ export default function PublicDashboard() {
         <div className="lg:col-span-8 flex flex-col gap-6">
           <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900">
-              {/* Video Placeholder - You can replace this with an actual video tag or iframe */}
               <div className="w-full h-full flex flex-col items-center justify-center text-white/20">
                 <MonitorPlay className="w-32 h-32 mb-4 group-hover:scale-110 transition-transform duration-500" />
                 <p className="text-xl font-bold uppercase tracking-[0.3em]">VIOLA Multimedia Channel</p>
@@ -65,10 +72,6 @@ export default function PublicDashboard() {
                   </div>
                 </div>
               </div>
-              {/* Optional: Add actual video element if needed */}
-              {/* <video autoPlay muted loop className="w-full h-full object-cover">
-                <source src="your-video-url.mp4" type="video/mp4" />
-              </video> */}
             </CardContent>
           </Card>
 
