@@ -146,13 +146,13 @@ export default function ParticipantIntake() {
                     Sistem Antrian Online
                   </CardDescription>
                   
-                  {/* Sisa Kuota Highlight */}
-                  <div className="bg-primary/5 border border-primary/20 py-3 px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-sm animate-pulse duration-[3000ms]">
-                    <Ticket className="w-6 h-6 text-primary" />
+                  {/* Sisa Kuota Highlight - Orange/Yellow Amber Theme */}
+                  <div className="bg-amber-100 border-2 border-amber-300 py-3 px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-md animate-pulse duration-[3000ms]">
+                    <Ticket className="w-6 h-6 text-amber-600" />
                     <div className="text-left">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Sisa Kuota Hari Ini</p>
-                      <p className="text-3xl font-black text-primary leading-none">
-                        {remainingQuota} <span className="text-xs font-bold text-muted-foreground uppercase">Antrian</span>
+                      <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Sisa Kuota Hari Ini</p>
+                      <p className="text-3xl font-black text-amber-700 leading-none">
+                        {remainingQuota} <span className="text-xs font-bold text-amber-800 uppercase">Antrian</span>
                       </p>
                     </div>
                   </div>
