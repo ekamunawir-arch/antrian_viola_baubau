@@ -104,8 +104,7 @@ export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 't
   try {
     const { zoomLink } = getSettings();
 
-    const message = `
-VIOLA – Virtual Office Layanan Peserta
+    const message = `VIOLA – Virtual Office Layanan Peserta
 
 Nomor Antrian Anda : ${newParticipant.queueNumber}
 Layanan : ${newParticipant.serviceType}
@@ -113,9 +112,9 @@ Layanan : ${newParticipant.serviceType}
 Silakan menunggu panggilan petugas.
 
 Link Zoom:
-${zoomLink}
-`;
+${zoomLink}`;
 
+    // Memanggil API Route internal kita
     fetch("/api/send-whatsapp", {
       method: "POST",
       headers: {
@@ -125,9 +124,12 @@ ${zoomLink}
         phone: newParticipant.whatsapp,
         message: message,
       }),
-    });
+    }).then(res => res.json())
+      .then(data => console.log("WhatsApp Response:", data))
+      .catch(err => console.error("WhatsApp Fetch Error:", err));
+
   } catch (error) {
-    console.error("WhatsApp notification failed:", error);
+    console.error("WhatsApp notification logic error:", error);
   }
 
   return { success: true, participant: newParticipant };
