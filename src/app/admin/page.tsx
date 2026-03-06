@@ -33,6 +33,16 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getQueueData, updateParticipantStatus, getSettings, saveSettings, clearQueueData } from '@/lib/queue-store';
 import { Participant, DEFAULT_ZOOM_LINK, CounterClerk } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
@@ -57,6 +67,9 @@ export default function AdminDashboard() {
   
   // Dashboard state
   const [activeClerkId, setActiveClerkId] = useState<string>('');
+  
+  // Dialog state
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   
   // Audio Queue refs
   const audioQueue = useRef<string[]>([]);
@@ -187,12 +200,11 @@ export default function AdminDashboard() {
     setActiveTab('dashboard');
   };
 
-  const handleResetQueue = () => {
-    if (confirm("Apakah Anda yakin ingin menghapus seluruh data antrian hari ini? Tindakan ini tidak dapat dibatalkan.")) {
-      clearQueueData();
-      setParticipants([]);
-      toast({ title: "Antrian Direset", description: "Seluruh data antrian hari ini telah dihapus secara permanen." });
-    }
+  const handleResetQueueAction = () => {
+    clearQueueData();
+    setParticipants([]);
+    setShowResetConfirm(false);
+    toast({ title: "Antrian Direset", description: "Seluruh data antrian hari ini telah dihapus secara permanen." });
   };
 
   const downloadCSV = () => {
@@ -542,7 +554,7 @@ export default function AdminDashboard() {
                   <div className="pt-4">
                     <Button 
                       variant="destructive" 
-                      onClick={handleResetQueue} 
+                      onClick={() => setShowResetConfirm(true)} 
                       className="w-full h-12 rounded-xl text-sm font-bold flex gap-2 opacity-80 hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="w-4 h-4" /> Hapus Seluruh Antrian Hari Ini
@@ -555,6 +567,31 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent className="rounded-3xl max-w-md">
+          <AlertDialogHeader>
+            <div className="mx-auto bg-destructive/10 p-4 rounded-full w-fit mb-2">
+              <AlertTriangle className="w-10 h-10 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-2xl font-black text-center">Reset Seluruh Antrian?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-base">
+              Apakah Anda yakin ingin menghapus <strong>seluruh data antrian hari ini</strong> secara permanen? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+            <AlertDialogCancel className="rounded-xl h-12 font-bold flex-1">Batal</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleResetQueueAction}
+              className="bg-destructive hover:bg-destructive/90 rounded-xl h-12 font-bold flex-1 border-none"
+            >
+              Ya, Hapus Semua
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Toaster />
     </div>
   );
