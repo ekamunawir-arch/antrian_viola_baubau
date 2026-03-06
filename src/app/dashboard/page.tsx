@@ -33,11 +33,11 @@ export default function PublicDashboard() {
     };
   }, []);
 
-  const calculateDuration = (startTime: string, now: Date | null) => {
-    if (!startTime || !now) return '00:00';
+  const calculateDuration = (startTime: string, endTime: string | Date | null) => {
+    if (!startTime || !endTime) return '00:00';
     const start = new Date(startTime).getTime();
-    const current = now.getTime();
-    const diffInSeconds = Math.max(0, Math.floor((current - start) / 1000));
+    const end = typeof endTime === 'string' ? new Date(endTime).getTime() : endTime.getTime();
+    const diffInSeconds = Math.max(0, Math.floor((end - start) / 1000));
     
     const minutes = Math.floor(diffInSeconds / 60);
     const seconds = diffInSeconds % 60;
@@ -170,7 +170,9 @@ export default function PublicDashboard() {
                         <p className="text-sm font-bold truncate leading-tight">{p.fullName}</p>
                         <div className="flex items-center justify-between mt-0.5">
                           <span className="text-[8px] font-bold text-muted-foreground uppercase">{p.serviceType}</span>
-                          <span className="text-[8px] font-black text-emerald-600 uppercase">Selesai</span>
+                          <span className="text-[8px] font-black text-emerald-600 uppercase flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" /> {calculateDuration(p.serveStartTime || '', p.serveEndTime || null)}
+                          </span>
                         </div>
                       </div>
                     </div>
