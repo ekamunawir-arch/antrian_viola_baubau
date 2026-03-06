@@ -24,9 +24,18 @@ export const getQueueData = (): { participants: Participant[]; date: string } =>
 export const saveQueueData = (participants: Participant[]) => {
   const today = new Date().toISOString().split('T')[0];
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ participants, date: today }));
-  // Dispatch custom event for cross-tab sync
+  // Dispatch custom event for same-window sync
   window.dispatchEvent(new Event('viola_storage_update'));
 };
+
+// Listener untuk sinkronisasi antar tab/jendela (cross-tab sync)
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === STORAGE_KEY) {
+      window.dispatchEvent(new Event('viola_storage_update'));
+    }
+  });
+}
 
 export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Participant | null => {
   const { participants } = getQueueData();

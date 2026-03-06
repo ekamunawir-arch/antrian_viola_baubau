@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Monitor, 
@@ -25,7 +25,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getQueueData, updateParticipantStatus, saveQueueData } from '@/lib/queue-store';
+import { getQueueData, updateParticipantStatus } from '@/lib/queue-store';
 import { Participant } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
@@ -38,6 +38,10 @@ export default function AdminDashboard() {
   const [password, setPassword] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [lastSync, setLastSync] = useState(new Date());
+  
+  // Audio Queue refs
+  const audioQueue = useRef<string[]>([]);
+  const isPlayingAudio = useRef(false);
 
   const fetchQueue = () => {
     const data = getQueueData();
@@ -50,6 +54,31 @@ export default function AdminDashboard() {
     window.addEventListener('viola_storage_update', fetchQueue);
     return () => window.removeEventListener('viola_storage_update', fetchQueue);
   }, []);
+
+  // Fungsi untuk memutar audio secara berurutan (Sequential Playback)
+  const playSequentially = async (dataUri: string) => {
+    audioQueue.current.push(dataUri);
+    
+    if (isPlayingAudio.current) return;
+
+    isPlayingAudio.current = true;
+    while (audioQueue.current.length > 0) {
+      const nextUri = audioQueue.current.shift();
+      if (nextUri) {
+        try {
+          const audio = new Audio(nextUri);
+          await new Promise((resolve) => {
+            audio.onended = resolve;
+            audio.onerror = resolve;
+            audio.play().catch(resolve);
+          });
+        } catch (e) {
+          console.error("Gagal memutar audio:", e);
+        }
+      }
+    }
+    isPlayingAudio.current = false;
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,10 +99,11 @@ export default function AdminDashboard() {
         queueNumber: p.queueNumber,
         participantName: p.fullName
       });
-      const audio = new Audio(result.audioDataUri);
-      audio.play();
+      // Menambahkan hasil TTS ke antrean putar audio
+      playSequentially(result.audioDataUri);
     } catch (error) {
-      console.error("TTS failed", error);
+      console.error("TTS gagal:", error);
+      toast({ variant: "destructive", title: "Gagal memanggil", description: "Terjadi kesalahan pada sistem suara." });
     }
   };
 
