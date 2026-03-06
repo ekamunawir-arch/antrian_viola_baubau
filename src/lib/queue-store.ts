@@ -90,7 +90,18 @@ export const clearQueueData = async () => {
 export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Promise<{ success: boolean; error?: string; participant?: Participant }> => {
   const today = getTodayDate();
   
-  if (cachedParticipants.length >= cachedSettings.dailyQuota) {
+  // Pastikan kita punya data pengaturan terbaru
+  let settings = cachedSettings;
+  try {
+    const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
+    if (settingsDoc.exists()) {
+      settings = settingsDoc.data() as SystemSettings;
+    }
+  } catch (e) {
+    console.warn("Using cached settings due to fetch error", e);
+  }
+  
+  if (cachedParticipants.length >= settings.dailyQuota) {
     return { success: false, error: 'Kuota harian telah habis.' };
   }
 
@@ -121,18 +132,24 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
     const docRef = await addDoc(collection(db, 'participants'), newParticipantData);
     const newParticipant = { id: docRef.id, ...newParticipantData };
 
-    // Kirim WhatsApp via API Route
-    fetch("/api/send-whatsapp", {
+    // Kirim WhatsApp via API Route (Awaited untuk stabilitas)
+    const waResponse = await fetch("/api/send-whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         phone: newParticipant.whatsapp,
-        message: `VIOLA – Virtual Office Layanan Peserta\n\nNomor Antrian Anda : ${newParticipant.queueNumber}\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${cachedSettings.zoomLink}`,
+        message: `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`,
       }),
-    }).catch(err => console.error("WhatsApp Error:", err));
+    });
+
+    const waResult = await waResponse.json();
+    if (!waResult.success) {
+      console.error("WhatsApp notification failed to send:", waResult.error || waResult.data);
+    }
 
     return { success: true, participant: newParticipant };
   } catch (e) {
+    console.error("Error adding participant:", e);
     return { success: false, error: 'Gagal menyimpan ke database.' };
   }
 };

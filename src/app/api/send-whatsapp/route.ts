@@ -9,9 +9,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Token not configured" }, { status: 500 });
     }
 
+    console.log(`Attempting to send WhatsApp to ${phone}...`);
+
     // Memanggil API Fonnte dari sisi server
-    // Catatan: Parameter 'url' harus berupa link gambar publik (https://...) agar bisa terkirim.
-    // Kami menggunakan gambar placeholder yang representatif sebagai contoh.
     const response = await fetch("https://api.fonnte.com/send", {
       method: "POST",
       headers: {
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         target: phone,
         message: message,
+        // Pastikan URL gambar adalah link publik yang valid
         url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80",
       }),
     });
@@ -29,12 +30,13 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       console.error("Fonnte API Error Response:", data);
-      return NextResponse.json({ success: false, data }, { status: response.status });
+      return NextResponse.json({ success: false, error: data.reason || "Fonnte API error", data }, { status: response.status });
     }
 
+    console.log("WhatsApp successfully sent via Fonnte.");
     return NextResponse.json({ success: true, data });
-  } catch (error) {
+  } catch (error: any) {
     console.error("WhatsApp API Route Error:", error);
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
