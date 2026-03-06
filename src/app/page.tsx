@@ -71,7 +71,7 @@ export default function ParticipantIntake() {
     waiting: 0,
     served: 0,
     absent: 0, 
-    current: null as Participant | null,
+    current: [] as Participant[],
     lastFinished: null as Participant | null
   });
 
@@ -85,7 +85,7 @@ export default function ParticipantIntake() {
       waiting: participants.filter(p => p.status === 'Waiting').length,
       served: participants.filter(p => p.status === 'Finished').length,
       absent: 0, 
-      current: participants.find(p => p.status === 'Being Served') || null,
+      current: participants.filter(p => p.status === 'Being Served'),
       lastFinished: [...participants].reverse().find(p => p.status === 'Finished') || null
     });
   };
@@ -322,14 +322,21 @@ export default function ParticipantIntake() {
                   <RefreshCcw className="w-5 h-5" />
                   <span className="font-bold text-sm uppercase tracking-wider">Sedang Diproses</span>
                 </div>
-                {queueInfo.current ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-4xl font-black text-[#005a78]">{queueInfo.current.queueNumber}</span>
-                    <span className="font-bold text-lg">{queueInfo.current.fullName}</span>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground italic text-sm">Tidak ada antrian yang sedang diproses</p>
-                )}
+                <div className="space-y-4">
+                  {queueInfo.current.length > 0 ? (
+                    queueInfo.current.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between border-b border-primary/10 pb-2 last:border-0 last:pb-0">
+                        <span className="text-4xl font-black text-[#005a78]">{p.queueNumber}</span>
+                        <div className="text-right">
+                          <span className="font-bold text-lg block">{p.fullName}</span>
+                          <Badge variant="outline" className="text-[10px] font-bold uppercase py-0">{p.serviceType}</Badge>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground italic text-sm">Tidak ada antrian yang sedang diproses</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
