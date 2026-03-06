@@ -15,7 +15,8 @@ import {
   Settings,
   Save,
   ArrowLeft,
-  Video
+  Video,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -102,8 +103,8 @@ export default function AdminDashboard() {
   };
 
   const handleCall = async (p: Participant) => {
+    // Optimistically update status to show calling state
     updateParticipantStatus(p.id, 'Being Served');
-    toast({ title: "Memanggil Antrian", description: `Memanggil ${p.queueNumber} - ${p.fullName}` });
     
     try {
       const result = await adminQueueCallAnnouncement({
@@ -112,12 +113,22 @@ export default function AdminDashboard() {
       });
       playSequentially(result.audioDataUri);
       
-      // LOGIC: Send Zoom Link to WhatsApp would happen here via API call
+      toast({ title: "Memanggil Antrian", description: `Memanggil ${p.queueNumber} - ${p.fullName}` });
       console.log(`Sending Zoom Link ${zoomLink} to ${p.whatsapp}`);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("TTS gagal:", error);
-      toast({ variant: "destructive", title: "Gagal memanggil", description: "Terjadi kesalahan pada sistem suara." });
+      
+      // Check for Rate Limit / Quota Exceeded error
+      const isQuotaError = error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429');
+      
+      toast({ 
+        variant: "destructive", 
+        title: isQuotaError ? "Batas Pemanggilan Tercapai" : "Gagal memanggil", 
+        description: isQuotaError 
+          ? "Sistem suara mencapai batas kuota sementara. Mohon tunggu sekitar 1 menit sebelum memanggil lagi." 
+          : "Terjadi kesalahan pada sistem suara." 
+      });
     }
   };
 
