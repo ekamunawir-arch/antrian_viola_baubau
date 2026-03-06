@@ -24,7 +24,7 @@ export default function PublicDashboard() {
     const interval = setInterval(() => {
       fetchData();
       setCurrentTime(new Date());
-    }, 2000); 
+    }, 1000); // Update every second for smooth duration timer
 
     window.addEventListener('viola_storage_update', fetchData);
     return () => {
@@ -32,6 +32,18 @@ export default function PublicDashboard() {
       window.removeEventListener('viola_storage_update', fetchData);
     };
   }, []);
+
+  const calculateDuration = (startTime: string, now: Date | null) => {
+    if (!startTime || !now) return '00:00';
+    const start = new Date(startTime).getTime();
+    const current = now.getTime();
+    const diffInSeconds = Math.max(0, Math.floor((current - start) / 1000));
+    
+    const minutes = Math.floor(diffInSeconds / 60);
+    const seconds = diffInSeconds % 60;
+    
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const beingServedList = participants.filter(p => p.status === 'Being Served');
   const finishedParticipants = participants.filter(p => p.status === 'Finished').slice(-5).reverse();
@@ -48,7 +60,7 @@ export default function PublicDashboard() {
         </div>
         <div className="text-right">
           <div className="text-3xl font-black tabular-nums">
-            {currentTime ? currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+            {currentTime ? currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
           </div>
           <div className="text-sm font-bold text-muted-foreground uppercase">
             {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '...'}
@@ -63,11 +75,11 @@ export default function PublicDashboard() {
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900">
               <div className="w-full h-full flex flex-col items-center justify-center text-white/20">
                 <MonitorPlay className="w-32 h-32 mb-4 group-hover:scale-110 transition-transform duration-500" />
-                <p className="text-xl font-bold uppercase tracking-[0.3em]">VIOLA Multimedia Channel</p>
+                <p className="text-xl font-bold uppercase tracking-[0.3em]">Saluran Multimedia VIOLA</p>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8">
                   <div className="flex items-center gap-4 text-white">
                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-                    <span className="text-sm font-black uppercase tracking-widest">Live Streaming Information</span>
+                    <span className="text-sm font-black uppercase tracking-widest">Siaran Langsung Informasi</span>
                   </div>
                 </div>
               </div>
@@ -102,7 +114,7 @@ export default function PublicDashboard() {
         {/* Sidebar: Information Panels */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           
-          {/* Part 1: Currently Serving (Sedang Dilayani) - BARIS LAYOUT */}
+          {/* Part 1: Currently Serving (Sedang Dilayani) */}
           <Card className="bg-white shadow-lg border-t-4 border-t-primary overflow-hidden">
             <div className="bg-primary/5 p-4 border-b flex items-center gap-2">
               <PlayCircle className="w-5 h-5 text-primary" />
@@ -122,10 +134,10 @@ export default function PublicDashboard() {
                       <div className="text-lg font-black tracking-tight truncate">{p.fullName}</div>
                       <div className="flex items-center justify-between text-[10px] opacity-70 font-bold uppercase">
                         <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" /> {p.staffName || 'Petugas 1'}
+                          <User className="w-3 h-3" /> {p.staffName || 'Petugas'}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {p.serveStartTime ? new Date(p.serveStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                          <Clock className="w-3 h-3" /> Durasi: {calculateDuration(p.serveStartTime || '', currentTime)}
                         </span>
                       </div>
                     </div>
@@ -140,7 +152,7 @@ export default function PublicDashboard() {
             </CardContent>
           </Card>
 
-          {/* Part 2: Recently Finished (Sudah Dilayani) */}
+          {/* Part 2: Recently Finished (Selesai Dilayani) */}
           <Card className="flex-1 bg-white shadow-lg border-none overflow-hidden">
             <div className="bg-slate-50 p-4 border-b flex items-center gap-2">
               <ListChecks className="w-5 h-5 text-slate-500" />
