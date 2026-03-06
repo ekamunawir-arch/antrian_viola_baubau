@@ -1,4 +1,4 @@
-import { Participant, DAILY_QUOTA } from './queue-types';
+import { Participant, ServiceType, DAILY_QUOTA } from './queue-types';
 
 const STORAGE_KEY = 'viola_queue_data';
 const SETTINGS_KEY = 'viola_settings';
@@ -58,8 +58,17 @@ export const addParticipant = (data: Omit<Participant, 'id' | 'queueNumber' | 't
   
   if (participants.length >= dailyQuota) return null;
 
-  const nextNumber = participants.length + 1;
-  const queueNumber = `A${nextNumber.toString().padStart(2, '0')}`;
+  // Penomoran berdasarkan jenis layanan
+  const prefixMap: Record<ServiceType, string> = {
+    'Pendaftaran Peserta': 'A',
+    'Perubahan data': 'B',
+    'Informasi & Pengaduan': 'C'
+  };
+
+  const prefix = prefixMap[data.serviceType as ServiceType];
+  const countInType = participants.filter(p => p.serviceType === data.serviceType).length;
+  const nextNumberInType = countInType + 1;
+  const queueNumber = `${prefix}-${nextNumberInType.toString().padStart(2, '0')}`;
   
   const newParticipant: Participant = {
     ...data,

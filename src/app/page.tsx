@@ -27,7 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { addParticipant, getQueueData, getSettings } from '@/lib/queue-store';
-import { Participant } from '@/lib/queue-types';
+import { Participant, ServiceType } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,7 @@ import { useRouter } from 'next/navigation';
 const formSchema = z.object({
   fullName: z.string().min(3, "Nama lengkap minimal 3 karakter"),
   whatsapp: z.string().regex(/^08[0-9]{8,11}$/, "Format nomor WhatsApp tidak valid (contoh: 081234567890)"),
-  serviceType: z.enum(['Administrasi', 'Informasi', 'Pengaduan']),
+  serviceType: z.enum(['Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan']),
 });
 
 export default function ParticipantIntake() {
@@ -86,7 +86,7 @@ export default function ParticipantIntake() {
     defaultValues: {
       fullName: '',
       whatsapp: '',
-      serviceType: 'Administrasi',
+      serviceType: 'Pendaftaran Peserta',
     },
   });
 
@@ -94,7 +94,7 @@ export default function ParticipantIntake() {
     const result = addParticipant({
       fullName: values.fullName,
       whatsapp: values.whatsapp,
-      serviceType: values.serviceType as any
+      serviceType: values.serviceType as ServiceType
     });
 
     if (result) {
@@ -198,13 +198,13 @@ export default function ParticipantIntake() {
 
                       <div className="space-y-4">
                         <FormLabel className="text-base font-bold text-[#005a78]">Jenis <span className="text-primary">Layanan</span></FormLabel>
-                        <div className="grid grid-cols-3 gap-3">
-                          {['Administrasi', 'Informasi', 'Pengaduan'].map((type) => (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {['Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan'].map((type) => (
                             <Button
                               key={type}
                               type="button"
                               variant={form.watch('serviceType') === type ? 'default' : 'outline'}
-                              className={`h-16 text-base font-bold rounded-xl border-2 transition-all ${
+                              className={`h-auto py-4 px-2 text-sm font-bold rounded-xl border-2 transition-all text-center leading-tight ${
                                 form.watch('serviceType') === type 
                                 ? 'bg-[#005a78] border-[#005a78] text-white' 
                                 : 'border-[#005a78] text-[#005a78] hover:bg-slate-50'
