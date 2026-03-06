@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData } from '@/lib/queue-store';
 import { Participant } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay } from 'lucide-react';
 
 export default function PublicDashboard() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -21,7 +21,7 @@ export default function PublicDashboard() {
     const interval = setInterval(() => {
       fetchData();
       setCurrentTime(new Date());
-    }, 2000); // Fast refresh for MVP realtime feel
+    }, 2000); 
 
     window.addEventListener('viola_storage_update', fetchData);
     return () => {
@@ -36,103 +36,129 @@ export default function PublicDashboard() {
   const totalToday = participants.length;
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-12 flex flex-col gap-8">
+    <div className="min-h-screen bg-background p-4 md:p-8 flex flex-col gap-6">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-xl border-b-8 border-b-primary">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-lg border-b-4 border-b-primary">
         <div className="space-y-1">
-          <h1 className="text-5xl font-black text-primary font-headline tracking-tighter">VIOLA</h1>
-          <p className="text-xl font-bold text-muted-foreground">Virtual Office Layanan Peserta</p>
+          <h1 className="text-4xl font-black text-primary font-headline tracking-tighter">VIOLA</h1>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Virtual Office Layanan Peserta</p>
         </div>
         <div className="text-right">
-          <div className="text-4xl font-black tabular-nums">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-          <div className="text-lg font-bold text-muted-foreground">{currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          <div className="text-3xl font-black tabular-nums">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          <div className="text-sm font-bold text-muted-foreground uppercase">{currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
-        {/* Main Serving Area */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
-          <Card className="flex-1 bg-gradient-viola text-white shadow-2xl border-none overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-12 opacity-10">
-              <Users className="w-64 h-64" />
-            </div>
-            <CardContent className="h-full flex flex-col items-center justify-center p-12 text-center space-y-6 relative z-10">
-              <div className="bg-white/20 px-8 py-3 rounded-full text-2xl font-black uppercase tracking-[0.2em]">SEDANG DILAYANI</div>
-              {currentlyServing ? (
-                <>
-                  <div className="text-[14rem] font-black leading-none drop-shadow-2xl">{currentlyServing.queueNumber}</div>
-                  <div className="text-6xl font-black tracking-tight">{currentlyServing.fullName}</div>
-                  <div className="text-2xl font-bold bg-white text-primary px-10 py-4 rounded-2xl shadow-lg mt-8 inline-block">
-                    {currentlyServing.serviceType}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+        {/* Main Panel: Video Player */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
+            <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900">
+              {/* Video Placeholder - You can replace this with an actual video tag or iframe */}
+              <div className="w-full h-full flex flex-col items-center justify-center text-white/20">
+                <MonitorPlay className="w-32 h-32 mb-4 group-hover:scale-110 transition-transform duration-500" />
+                <p className="text-xl font-bold uppercase tracking-[0.3em]">VIOLA Multimedia Channel</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8">
+                  <div className="flex items-center gap-4 text-white">
+                    <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+                    <span className="text-sm font-black uppercase tracking-widest">Live Streaming Information</span>
                   </div>
-                  {currentlyServing.serveStartTime && (
-                    <div className="text-xl font-medium flex items-center gap-2 mt-4 opacity-80">
-                      <Clock className="w-6 h-6" /> Mulai: {new Date(currentlyServing.serveStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-4xl font-bold italic opacity-60">Tidak ada antrian aktif</div>
-              )}
+                </div>
+              </div>
+              {/* Optional: Add actual video element if needed */}
+              {/* <video autoPlay muted loop className="w-full h-full object-cover">
+                <source src="your-video-url.mp4" type="video/mp4" />
+              </video> */}
             </CardContent>
           </Card>
 
-          {/* Next Up Bar */}
-          <div className="bg-white p-8 rounded-3xl shadow-lg border-2 border-dashed border-primary/30 flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="bg-muted p-4 rounded-2xl">
-                <ArrowRightCircle className="w-12 h-12 text-primary" />
+          {/* Bottom Bar: Queue Summary */}
+          <div className="bg-white p-6 rounded-2xl shadow-md border border-dashed border-primary/30 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/10 p-3 rounded-xl">
+                <ArrowRightCircle className="w-8 h-8 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">Antrian Berikutnya</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Antrian Berikutnya</p>
                 {nextInQueue ? (
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-5xl font-black text-primary">{nextInQueue.queueNumber}</span>
-                    <span className="text-3xl font-bold">{nextInQueue.fullName}</span>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-black text-primary">{nextInQueue.queueNumber}</span>
+                    <span className="text-xl font-bold text-slate-700">{nextInQueue.fullName}</span>
                   </div>
                 ) : (
-                  <span className="text-2xl font-bold text-muted-foreground italic">Belum Ada</span>
+                  <span className="text-lg font-bold text-muted-foreground italic">Tidak Ada Antrian</span>
                 )}
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">Total Antrian</p>
-              <p className="text-5xl font-black text-primary">{totalToday}<span className="text-2xl text-muted-foreground">/20</span></p>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Antrian Hari Ini</p>
+              <p className="text-4xl font-black text-primary">{totalToday}<span className="text-xl text-muted-foreground">/20</span></p>
             </div>
           </div>
         </div>
 
-        {/* Sidebar: History */}
+        {/* Sidebar: Information Panels */}
         <div className="lg:col-span-4 flex flex-col gap-6">
+          
+          {/* Part 1: Currently Serving (Sedang Dilayani) */}
+          <Card className="bg-gradient-to-br from-[#005a78] to-[#003d52] text-white shadow-xl border-none">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="bg-white/20 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em]">SEDANG DILAYANI</div>
+              {currentlyServing ? (
+                <>
+                  <div className="text-8xl font-black leading-none drop-shadow-lg">{currentlyServing.queueNumber}</div>
+                  <div className="text-2xl font-black tracking-tight">{currentlyServing.fullName}</div>
+                  <Badge className="bg-white text-primary px-6 py-2 rounded-xl shadow-md text-sm font-bold border-none mt-2">
+                    {currentlyServing.serviceType}
+                  </Badge>
+                  {currentlyServing.serveStartTime && (
+                    <div className="text-xs font-medium flex items-center gap-2 opacity-70">
+                      <Clock className="w-4 h-4" /> Mulai: {new Date(currentlyServing.serveStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="py-8 space-y-2">
+                  <Users className="w-12 h-12 mx-auto opacity-20" />
+                  <p className="text-lg font-bold italic opacity-40">Antrian Kosong</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Part 2: Recently Finished (Sudah Dilayani) */}
           <Card className="flex-1 bg-white shadow-lg border-none">
-            <CardContent className="p-8 space-y-8">
-              <div className="flex items-center gap-4 border-b pb-6">
-                <ListChecks className="w-8 h-8 text-primary" />
-                <h2 className="text-2xl font-black font-headline">Sudah Dilayani</h2>
+            <CardContent className="p-6 space-y-6">
+              <div className="flex items-center gap-3 border-b pb-4">
+                <ListChecks className="w-6 h-6 text-primary" />
+                <h2 className="text-xl font-black font-headline tracking-tight">Selesai Dilayani</h2>
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {finishedParticipants.length > 0 ? (
                   finishedParticipants.map((p) => (
-                    <div key={p.id} className="flex items-center gap-4 animate-in slide-in-from-bottom-4 duration-500">
-                      <div className="bg-primary/10 text-primary w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black shrink-0">
+                    <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl animate-in slide-in-from-right-4 duration-300">
+                      <div className="bg-primary/10 text-primary w-14 h-14 rounded-xl flex items-center justify-center text-xl font-black shrink-0 border border-primary/20">
                         {p.queueNumber}
                       </div>
                       <div className="flex-1 overflow-hidden">
-                        <p className="text-2xl font-bold truncate">{p.fullName}</p>
+                        <p className="text-base font-bold truncate leading-tight">{p.fullName}</p>
                         <div className="flex items-center justify-between mt-1">
-                          <Badge variant="outline" className="text-[10px] font-bold uppercase">{p.serviceType}</Badge>
-                          <span className="text-sm font-bold text-muted-foreground">Selesai {p.serveEndTime && new Date(p.serveEndTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase">{p.serviceType}</span>
+                          <span className="text-[9px] font-black text-emerald-600 uppercase">Selesai</span>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-20 text-muted-foreground font-bold text-lg italic">Belum ada peserta selesai</div>
+                  <div className="text-center py-10 text-muted-foreground font-bold text-sm italic opacity-50">
+                    Belum ada data
+                  </div>
                 )}
               </div>
             </CardContent>
           </Card>
+
         </div>
       </div>
     </div>
