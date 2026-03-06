@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Ticket,
   MessageSquare,
-  Info
+  Info,
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { addParticipant, getQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, ServiceType } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
@@ -41,6 +52,8 @@ const formSchema = z.object({
   serviceType: z.enum(['Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan']),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function ParticipantIntake() {
   const router = useRouter();
   const [step, setStep] = useState<'form' | 'success'>('form');
@@ -48,6 +61,11 @@ export default function ParticipantIntake() {
   const [isFull, setIsFull] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [dailyQuota, setDailyQuota] = useState(20);
+  
+  // States for confirmation dialog
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingData, setPendingData] = useState<FormValues | null>(null);
+
   const [queueInfo, setQueueInfo] = useState({
     total: 0,
     waiting: 0,
@@ -83,7 +101,7 @@ export default function ParticipantIntake() {
     };
   }, []);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: '',
@@ -92,11 +110,19 @@ export default function ParticipantIntake() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: FormValues) => {
+    // Step 1: Trigger confirmation popup instead of immediate registration
+    setPendingData(values);
+    setShowConfirm(true);
+  };
+
+  const handleFinalSubmit = () => {
+    if (!pendingData) return;
+
     const result = addParticipant({
-      fullName: values.fullName,
-      whatsapp: values.whatsapp,
-      serviceType: values.serviceType as ServiceType
+      fullName: pendingData.fullName,
+      whatsapp: pendingData.whatsapp,
+      serviceType: pendingData.serviceType as ServiceType
     });
 
     if (result.success && result.participant) {
@@ -107,6 +133,9 @@ export default function ParticipantIntake() {
     } else {
       toast({ variant: "destructive", title: "Pendaftaran Gagal", description: result.error || "Terjadi kesalahan." });
     }
+    
+    setShowConfirm(false);
+    setPendingData(null);
   };
 
   const remainingQuota = Math.max(0, dailyQuota - queueInfo.total);
@@ -341,6 +370,36 @@ export default function ParticipantIntake() {
         </div>
 
       </main>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="rounded-2xl max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl font-black text-[#005a78]">Konfirmasi Nomor</AlertDialogTitle>
+            <AlertDialogDescription className="text-center pt-2">
+              Apakah nomor WhatsApp Anda sudah benar?
+              <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/20 flex items-center justify-center gap-3">
+                <Phone className="w-5 h-5 text-primary" />
+                <span className="text-2xl font-black tracking-wider text-primary">{pendingData?.whatsapp}</span>
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed">
+                Kami akan mengirimkan <strong>Link Zoom</strong> ke nomor ini saat giliran Anda tiba. Pastikan nomor aktif.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col gap-2 sm:flex-col mt-4">
+            <AlertDialogAction 
+              onClick={handleFinalSubmit}
+              className="w-full h-12 bg-primary hover:bg-primary/90 rounded-xl font-bold"
+            >
+              Ya, Sudah Benar
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full h-12 border-2 rounded-xl font-bold">
+              Ubah Nomor
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Footer Bar */}
       <footer className="bg-emerald-500 text-white p-4 text-center font-bold tracking-wide shadow-inner mt-auto">
