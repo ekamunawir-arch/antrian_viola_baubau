@@ -17,7 +17,10 @@ import {
   ArrowLeft,
   Video,
   User,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Trash2,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -31,12 +34,13 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, updateParticipantStatus, getSettings, saveSettings } from '@/lib/queue-store';
-import { Participant, DEFAULT_ZOOM_LINK } from '@/lib/queue-types';
+import { Participant, DEFAULT_ZOOM_LINK, CounterClerk } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -49,6 +53,10 @@ export default function AdminDashboard() {
   // Settings state
   const [dailyQuota, setDailyQuota] = useState(20);
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
+  const [clerks, setClerks] = useState<CounterClerk[]>([]);
+  
+  // Dashboard state
+  const [activeClerkId, setActiveClerkId] = useState<string>('');
   
   // Audio Queue refs
   const audioQueue = useRef<string[]>([]);
@@ -60,6 +68,12 @@ export default function AdminDashboard() {
     setParticipants(data.participants);
     setDailyQuota(settings.dailyQuota);
     setZoomLink(settings.zoomLink);
+    setClerks(settings.clerks);
+    
+    if (!activeClerkId && settings.clerks.length > 0) {
+      setActiveClerkId(settings.clerks[0].id);
+    }
+    
     setLastSync(new Date());
   };
 
@@ -67,7 +81,7 @@ export default function AdminDashboard() {
     fetchQueue();
     window.addEventListener('viola_storage_update', fetchQueue);
     return () => window.removeEventListener('viola_storage_update', fetchQueue);
-  }, []);
+  }, [activeClerkId]);
 
   const playSequentially = async (dataUri: string) => {
     audioQueue.current.push(dataUri);
@@ -104,7 +118,13 @@ export default function AdminDashboard() {
   };
 
   const handleCall = async (p: Participant) => {
-    updateParticipantStatus(p.id, 'Being Served');
+    const clerk = clerks.find(c => c.id === activeClerkId);
+    if (!clerk) {
+      toast({ variant: "destructive", title: "Petugas Belum Dipilih", description: "Silakan pilih petugas loket terlebih dahulu." });
+      return;
+    }
+
+    updateParticipantStatus(p.id, 'Being Served', clerk.name);
     
     try {
       const result = await adminQueueCallAnnouncement({
@@ -123,7 +143,7 @@ export default function AdminDashboard() {
       
       if (result.audioDataUri) {
         playSequentially(result.audioDataUri);
-        toast({ title: "Memanggil Antrian", description: `Memanggil ${p.queueNumber} - ${p.fullName}` });
+        toast({ title: "Memanggil Antrian", description: `Memanggil ${p.queueNumber} - ${p.fullName} oleh ${clerk.name}` });
       }
       
     } catch (error: any) {
@@ -141,8 +161,28 @@ export default function AdminDashboard() {
     toast({ title: "Layanan Selesai", description: "Peserta telah dipindahkan ke daftar selesai." });
   };
 
+  const handleAddClerk = () => {
+    const newClerk: CounterClerk = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: `Petugas ${clerks.length + 1}`
+    };
+    setClerks([...clerks, newClerk]);
+  };
+
+  const handleRemoveClerk = (id: string) => {
+    if (clerks.length <= 1) {
+      toast({ variant: "destructive", title: "Gagal Menghapus", description: "Minimal harus ada satu petugas loket." });
+      return;
+    }
+    setClerks(clerks.filter(c => c.id !== id));
+  };
+
+  const handleClerkNameChange = (id: string, name: string) => {
+    setClerks(clerks.map(c => c.id === id ? { ...c, name } : c));
+  };
+
   const handleSaveSettings = () => {
-    saveSettings({ dailyQuota, zoomLink });
+    saveSettings({ dailyQuota, zoomLink, clerks });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
   };
@@ -150,14 +190,15 @@ export default function AdminDashboard() {
   const downloadCSV = () => {
     if (participants.length === 0) return;
     const today = new Date().toISOString().split('T')[0];
-    const headers = ["Tanggal", "Nama", "Nomor HP", "Jenis Layanan", "Nomor Antrian", "Status"];
+    const headers = ["Tanggal", "Nama", "Nomor HP", "Jenis Layanan", "Nomor Antrian", "Status", "Petugas"];
     const rows = participants.map(p => [
       today,
       p.fullName,
       p.whatsapp,
       p.serviceType,
       p.queueNumber,
-      p.status
+      p.status,
+      p.staffName || "-"
     ]);
     
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -241,9 +282,27 @@ export default function AdminDashboard() {
         {activeTab === 'dashboard' ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
             <Card className="md:col-span-2 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="font-headline text-lg">Daftar Antrian Hari Ini</CardTitle>
-                <Badge variant="outline" className="rounded-full px-4">{participants.length} Antrian</Badge>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 border-b mb-4">
+                <div className="space-y-1">
+                  <CardTitle className="font-headline text-lg">Daftar Antrian Hari Ini</CardTitle>
+                  <CardDescription>Kelola panggilan dan status layanan peserta.</CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loket Aktif Anda</p>
+                    <Select value={activeClerkId} onValueChange={setActiveClerkId}>
+                      <SelectTrigger className="h-9 w-[180px] bg-muted/50 font-bold border-none rounded-lg mt-1">
+                        <SelectValue placeholder="Pilih Petugas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clerks.map(c => (
+                          <SelectItem key={c.id} value={c.id} className="font-bold">{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Badge variant="outline" className="rounded-full px-4 h-8">{participants.length} Antrian</Badge>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="rounded-xl border overflow-hidden">
@@ -276,13 +335,18 @@ export default function AdminDashboard() {
                               <Badge variant="secondary" className="text-[10px] font-bold uppercase">{p.serviceType}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge className={
-                                p.status === 'Waiting' ? 'bg-yellow-500' : 
-                                p.status === 'Being Served' ? 'bg-blue-600' : 'bg-green-600'
-                              }>
-                                {p.status === 'Waiting' ? 'Menunggu' : 
-                                 p.status === 'Being Served' ? 'Melayani' : 'Selesai'}
-                              </Badge>
+                              <div className="flex flex-col gap-1">
+                                <Badge className={
+                                  p.status === 'Waiting' ? 'bg-yellow-500' : 
+                                  p.status === 'Being Served' ? 'bg-blue-600' : 'bg-green-600'
+                                }>
+                                  {p.status === 'Waiting' ? 'Menunggu' : 
+                                   p.status === 'Being Served' ? 'Melayani' : 'Selesai'}
+                                </Badge>
+                                {p.staffName && (
+                                  <span className="text-[10px] text-muted-foreground italic">Oleh: {p.staffName}</span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
@@ -333,7 +397,7 @@ export default function AdminDashboard() {
                               {p.serviceType}
                             </Badge>
                             <span className="text-[9px] font-bold text-sky-600 flex items-center gap-0.5">
-                              <Clock className="w-2.5 h-2.5" /> Aktif
+                              {p.staffName}
                             </span>
                           </div>
                         </div>
@@ -369,7 +433,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-300">
+          <div className="max-w-3xl mx-auto animate-in slide-in-from-bottom-4 duration-300">
             <Card className="shadow-lg border-t-4 border-t-primary">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -384,31 +448,31 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6 pt-4">
-                <div className="space-y-6">
+              <CardContent className="space-y-8 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Quota Setting */}
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="quota" className="text-base font-bold text-primary uppercase tracking-wider">Kuota Antrian Harian</Label>
-                    <p className="text-xs text-muted-foreground">Tentukan berapa banyak peserta maksimal yang dapat mendaftar per hari.</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="quota" className="text-sm font-black text-primary uppercase tracking-wider">Kuota Antrian Harian</Label>
+                    <p className="text-xs text-muted-foreground">Maksimal pendaftar per hari.</p>
                     <div className="flex items-center gap-4 mt-2">
                       <Input 
                         id="quota"
                         type="number" 
                         value={dailyQuota} 
                         onChange={(e) => setDailyQuota(parseInt(e.target.value) || 0)}
-                        className="max-w-[120px] h-14 text-center text-2xl font-black rounded-xl"
+                        className="max-w-[120px] h-12 text-center text-xl font-black rounded-xl"
                       />
-                      <div className="text-muted-foreground font-medium">Peserta per hari</div>
+                      <div className="text-muted-foreground font-medium text-sm">Peserta</div>
                     </div>
                   </div>
 
                   {/* Zoom Link Setting */}
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="zoom" className="text-base font-bold text-primary uppercase tracking-wider">Link Zoom Layanan</Label>
-                    <p className="text-xs text-muted-foreground">Link ini akan dikirimkan ke peserta melalui WhatsApp saat dipanggil.</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="zoom" className="text-sm font-black text-primary uppercase tracking-wider">Link Zoom Layanan</Label>
+                    <p className="text-xs text-muted-foreground">Link yang akan dikirim ke WhatsApp peserta.</p>
                     <div className="relative mt-2">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <Video className="w-5 h-5" />
+                        <Video className="w-4 h-4" />
                       </div>
                       <Input 
                         id="zoom"
@@ -416,15 +480,55 @@ export default function AdminDashboard() {
                         value={zoomLink} 
                         onChange={(e) => setZoomLink(e.target.value)}
                         placeholder="https://zoom.us/..."
-                        className="h-14 pl-12 rounded-xl text-lg font-medium"
+                        className="h-12 pl-12 rounded-xl text-sm font-medium"
                       />
                     </div>
                   </div>
                 </div>
 
+                {/* Clerks/Staff Setting */}
+                <div className="space-y-4 border-t pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-black text-primary uppercase tracking-wider">Manajemen Petugas Loket</Label>
+                      <p className="text-xs text-muted-foreground">Daftarkan nama petugas untuk setiap loket layanan.</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleAddClerk} className="rounded-full border-primary text-primary hover:bg-primary/5">
+                      <Plus className="w-4 h-4 mr-2" /> Tambah Loket
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {clerks.map((clerk, index) => (
+                      <div key={clerk.id} className="flex items-center gap-3 p-4 bg-muted/30 rounded-2xl border group transition-all hover:bg-white hover:shadow-md">
+                        <div className="bg-primary/10 text-primary w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama Petugas</Label>
+                          <Input 
+                            value={clerk.name}
+                            onChange={(e) => handleClerkNameChange(clerk.id, e.target.value)}
+                            placeholder="Contoh: Budi Santoso"
+                            className="h-10 border-none bg-transparent p-0 focus-visible:ring-0 text-sm font-bold"
+                          />
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleRemoveClerk(clerk.id)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="pt-6 border-t">
                   <Button onClick={handleSaveSettings} className="w-full h-14 bg-primary hover:bg-primary/90 rounded-xl text-lg font-bold flex gap-2">
-                    <Save className="w-5 h-5" /> Simpan Perubahan
+                    <Save className="w-5 h-5" /> Simpan Pengaturan
                   </Button>
                 </div>
               </CardContent>

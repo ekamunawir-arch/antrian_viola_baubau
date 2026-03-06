@@ -1,4 +1,4 @@
-import { Participant, ServiceType, DAILY_QUOTA, SystemSettings, DEFAULT_ZOOM_LINK } from './queue-types';
+import { Participant, ServiceType, DAILY_QUOTA, SystemSettings, DEFAULT_ZOOM_LINK, DEFAULT_CLERKS } from './queue-types';
 
 const STORAGE_KEY = 'viola_queue_data';
 const SETTINGS_KEY = 'viola_settings';
@@ -30,16 +30,17 @@ export const saveQueueData = (participants: Participant[]) => {
 };
 
 export const getSettings = (): SystemSettings => {
-  if (typeof window === 'undefined') return { dailyQuota: DAILY_QUOTA, zoomLink: DEFAULT_ZOOM_LINK };
+  if (typeof window === 'undefined') return { dailyQuota: DAILY_QUOTA, zoomLink: DEFAULT_ZOOM_LINK, clerks: DEFAULT_CLERKS };
   const stored = localStorage.getItem(SETTINGS_KEY);
   if (stored) {
     const parsed = JSON.parse(stored);
     return {
       dailyQuota: parsed.dailyQuota ?? DAILY_QUOTA,
-      zoomLink: parsed.zoomLink ?? DEFAULT_ZOOM_LINK
+      zoomLink: parsed.zoomLink ?? DEFAULT_ZOOM_LINK,
+      clerks: parsed.clerks ?? DEFAULT_CLERKS
     };
   }
-  return { dailyQuota: DAILY_QUOTA, zoomLink: DEFAULT_ZOOM_LINK };
+  return { dailyQuota: DAILY_QUOTA, zoomLink: DEFAULT_ZOOM_LINK, clerks: DEFAULT_CLERKS };
 };
 
 export const saveSettings = (settings: SystemSettings) => {
