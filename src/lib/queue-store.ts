@@ -134,25 +134,37 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
     const docRef = await addDoc(collection(db, 'participants'), newParticipantData);
     const newParticipant = { id: docRef.id, ...newParticipantData };
 
-    // Kirim WhatsApp via API Route
-    const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`;
+    /** 
+     * ALUR WHATSAPP DI LATAR BELAKANG (BACKGROUND TASK)
+     * Kita tidak menggunakan 'await' pada fungsi ini agar UI bisa langsung lanjut tampil.
+     */
+    const sendWhatsAppInBackground = async () => {
+      // Jeda 15 detik sesuai permintaan agar tidak terindikasi spam
+      await delay(15000);
+      
+      try {
+        const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`;
 
-    // Batasi pengiriman WhatsApp agar tidak terlalu cepat
-    await delay(15000);
+        const waResponse = await fetch("/api/send-whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: newParticipant.whatsapp,
+            message: message,
+          }),
+        });
 
-    const waResponse = await fetch("/api/send-whatsapp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phone: newParticipant.whatsapp,
-        message: message,
-      }),
-    });
+        const waResult = await waResponse.json();
+        if (!waResult.success) {
+          console.error("WhatsApp Background Send Error:", waResult.error);
+        }
+      } catch (err) {
+        console.error("Critical Background WhatsApp Error:", err);
+      }
+    };
 
-    const waResult = await waResponse.json();
-    if (!waResult.success) {
-      console.error("WhatsApp Send Error:", waResult.error);
-    }
+    // Jalankan tanpa 'await' agar pendaftaran terasa instan di layar HP
+    sendWhatsAppInBackground();
 
     return { success: true, participant: newParticipant };
   } catch (e) {
