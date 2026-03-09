@@ -136,23 +136,15 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
 
     /** 
      * ALUR WHATSAPP DI LATAR BELAKANG (BACKGROUND TASK)
-     * Dengan Staggered Delay untuk menghindari deteksi spam.
+     * Menggunakan jeda bertingkat berdasarkan nomor urut antrian (Staggered Delay).
      */
-    const sendWhatsAppInBackground = async () => {
-      const now = Date.now();
+    const sendWhatsAppInBackground = async (orderPos: number) => {
+      // Jeda per orang adalah 20 detik dikalikan urutan antrian mereka hari ini.
+      // Antrian 1: 20 detik, Antrian 2: 40 detik, dst.
+      // Ini menjamin tidak akan ada dua pesan terkirim bersamaan meski didaftarkan di detik yang sama.
+      const dynamicDelay = orderPos * 20000;
       
-      // Hitung berapa banyak pendaftar dalam 2 menit terakhir
-      // Ini digunakan untuk menentukan antrian pengiriman
-      const recentBursts = cachedParticipants.filter(p => {
-        const pTime = new Date(p.timestamp).getTime();
-        return (now - pTime) < 120000; // 2 menit terakhir
-      }).length;
-
-      // Jeda dinamis: 15 detik + (15 detik * jumlah orang yang mendaftar bersamaan)
-      // Jika orang ke-5 mendaftar, dia akan menunggu 15 + (4 * 15) = 75 detik.
-      const dynamicDelay = 15000 + (recentBursts * 15000);
-      
-      console.log(`WhatsApp untuk ${newParticipant.queueNumber} akan dikirim dalam ${dynamicDelay / 1000} detik...`);
+      console.log(`WhatsApp untuk ${newParticipant.queueNumber} (Urutan ke-${orderPos}) akan dikirim dalam ${dynamicDelay / 1000} detik...`);
       
       await delay(dynamicDelay);
       
@@ -179,8 +171,8 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
       }
     };
 
-    // Jalankan tanpa 'await' agar pendaftaran terasa instan di layar HP
-    sendWhatsAppInBackground();
+    // Jalankan dengan urutan posisi yang sudah dikunci
+    sendWhatsAppInBackground(nextGlobalNumber);
 
     return { success: true, participant: newParticipant };
   } catch (e) {
