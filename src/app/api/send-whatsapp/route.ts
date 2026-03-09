@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: data.reason || "Fonnte API error", data }, { status: response.status });
     }
 
-    console.log("WhatsApp successfully sent via Fonnte.");
+    console.log(`WhatsApp successfully sent to ${phone} via Fonnte.`);
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
     console.error("WhatsApp API Route Error:", error);

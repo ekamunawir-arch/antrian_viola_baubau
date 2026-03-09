@@ -140,11 +140,11 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
      */
     const sendWhatsAppInBackground = async (orderPos: number) => {
       // Jeda per orang adalah 20 detik dikalikan urutan antrian mereka hari ini.
-      // Antrian 1: 20 detik, Antrian 2: 40 detik, dst.
-      // Ini menjamin tidak akan ada dua pesan terkirim bersamaan meski didaftarkan di detik yang sama.
-      const dynamicDelay = orderPos * 20000;
+      // Ditambah jitter acak (0-5 detik) agar tidak terkirim di milidetik yang sama.
+      const jitter = Math.floor(Math.random() * 5000);
+      const dynamicDelay = (orderPos * 20000) + jitter;
       
-      console.log(`WhatsApp untuk ${newParticipant.queueNumber} (Urutan ke-${orderPos}) akan dikirim dalam ${dynamicDelay / 1000} detik...`);
+      console.log(`WhatsApp untuk ${newParticipant.queueNumber} (Urutan ke-${orderPos}) dijadwalkan dalam ${dynamicDelay / 1000} detik...`);
       
       await delay(dynamicDelay);
       
@@ -171,7 +171,7 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
       }
     };
 
-    // Jalankan dengan urutan posisi yang sudah dikunci
+    // Jalankan tanpa await agar pendaftaran selesai instan
     sendWhatsAppInBackground(nextGlobalNumber);
 
     return { success: true, participant: newParticipant };
