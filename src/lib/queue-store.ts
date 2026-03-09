@@ -21,6 +21,8 @@ import {
   DEFAULT_CLERKS 
 } from './queue-types';
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // State lokal untuk sinkronisasi cepat di UI
 let cachedParticipants: Participant[] = [];
 let cachedSettings: SystemSettings = { 
@@ -134,6 +136,9 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
 
     // Kirim WhatsApp via API Route
     const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`;
+
+    // Batasi pengiriman WhatsApp agar tidak terlalu cepat
+    await delay(15000);
 
     const waResponse = await fetch("/api/send-whatsapp", {
       method: "POST",
