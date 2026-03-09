@@ -10,7 +10,8 @@ import {
   getDoc, 
   setDoc,
   getDocs,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from 'firebase/firestore';
 import { 
   Participant, 
@@ -57,7 +58,8 @@ if (typeof window !== 'undefined') {
       setDoc(doc(db, 'settings', 'config'), { 
         dailyQuota: DAILY_QUOTA, 
         zoomLink: DEFAULT_ZOOM_LINK, 
-        clerks: DEFAULT_CLERKS 
+        clerks: DEFAULT_CLERKS,
+        lastWhatsAppSentAt: Date.now()
       });
     }
     window.dispatchEvent(new Event('viola_storage_update'));
@@ -92,7 +94,7 @@ export const clearQueueData = async () => {
 export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Promise<{ success: boolean; error?: string; participant?: Participant }> => {
   const today = getTodayDate();
   
-  // Ambil settings terbaru langsung dari Firestore sebelum validasi
+  // Ambil settings terbaru
   let settings = cachedSettings;
   try {
     const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
@@ -100,7 +102,7 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
       settings = settingsDoc.data() as SystemSettings;
     }
   } catch (e) {
-    console.warn("Gagal mengambil settings terbaru, menggunakan cache.", e);
+    console.warn("Gagal mengambil settings terbaru.", e);
   }
   
   if (cachedParticipants.length >= settings.dailyQuota) {
@@ -131,24 +133,38 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
   };
 
   try {
+    // 1. Simpan peserta ke Firestore (Instan)
     const docRef = await addDoc(collection(db, 'participants'), newParticipantData);
     const newParticipant = { id: docRef.id, ...newParticipantData };
 
-    /** 
-     * ALUR WHATSAPP DI LATAR BELAKANG (BACKGROUND TASK)
-     * Menggunakan jeda bertingkat berdasarkan nomor urut antrian (Staggered Delay).
-     */
-    const sendWhatsAppInBackground = async (orderPos: number) => {
-      // Jeda per orang adalah 20 detik dikalikan urutan antrian mereka hari ini.
-      // Ditambah jitter acak (0-5 detik) agar tidak terkirim di milidetik yang sama.
-      const jitter = Math.floor(Math.random() * 5000);
-      const dynamicDelay = (orderPos * 20000) + jitter;
-      
-      console.log(`WhatsApp untuk ${newParticipant.queueNumber} (Urutan ke-${orderPos}) dijadwalkan dalam ${dynamicDelay / 1000} detik...`);
-      
-      await delay(dynamicDelay);
+    // 2. Jadwalkan waktu pengiriman WhatsApp yang unik (Distributed Queue)
+    const scheduleWhatsApp = async () => {
+      const settingsRef = doc(db, 'settings', 'config');
       
       try {
+        const targetTime = await runTransaction(db, async (transaction) => {
+          const configDoc = await transaction.get(settingsRef);
+          const now = Date.now();
+          let lastSentAt = now;
+
+          if (configDoc.exists() && configDoc.data().lastWhatsAppSentAt) {
+            lastSentAt = configDoc.data().lastWhatsAppSentAt;
+          }
+
+          // Aturan: Jeda minimal 45 detik antar pesan dari SIAPA PUN di sistem
+          // Jika sekarang sudah lewat 45 detik dari pengiriman terakhir, mulai dalam 10 detik
+          // Jika belum, tambahkan 45 detik dari jadwal terakhir
+          const scheduledFor = Math.max(now + 10000, lastSentAt + 45000);
+          
+          transaction.update(settingsRef, { lastWhatsAppSentAt: scheduledFor });
+          return scheduledFor;
+        });
+
+        const waitMs = targetTime - Date.now();
+        console.log(`WhatsApp ${newParticipant.queueNumber} dijadwalkan dalam ${waitMs / 1000} detik...`);
+        
+        await delay(waitMs);
+
         const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`;
 
         const waResponse = await fetch("/api/send-whatsapp", {
@@ -161,18 +177,18 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
         });
 
         const waResult = await waResponse.json();
-        if (!waResult.success) {
-          console.error("WhatsApp Background Send Error:", waResult.error);
+        if (waResult.success) {
+          console.log(`WhatsApp terkirim untuk ${newParticipant.queueNumber} sesuai jadwal.`);
         } else {
-          console.log(`WhatsApp terkirim untuk ${newParticipant.queueNumber}`);
+          console.error(`Gagal mengirim WhatsApp: ${waResult.error}`);
         }
       } catch (err) {
-        console.error("Critical Background WhatsApp Error:", err);
+        console.error("Kesalahan pada alur penjadwalan WhatsApp:", err);
       }
     };
 
-    // Jalankan tanpa await agar pendaftaran selesai instan
-    sendWhatsAppInBackground(nextGlobalNumber);
+    // Jalankan penjadwalan di latar belakang
+    scheduleWhatsApp();
 
     return { success: true, participant: newParticipant };
   } catch (e) {
