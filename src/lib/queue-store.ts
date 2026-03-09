@@ -136,11 +136,25 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
 
     /** 
      * ALUR WHATSAPP DI LATAR BELAKANG (BACKGROUND TASK)
-     * Kita tidak menggunakan 'await' pada fungsi ini agar UI bisa langsung lanjut tampil.
+     * Dengan Staggered Delay untuk menghindari deteksi spam.
      */
     const sendWhatsAppInBackground = async () => {
-      // Jeda 15 detik sesuai permintaan agar tidak terindikasi spam
-      await delay(15000);
+      const now = Date.now();
+      
+      // Hitung berapa banyak pendaftar dalam 2 menit terakhir
+      // Ini digunakan untuk menentukan antrian pengiriman
+      const recentBursts = cachedParticipants.filter(p => {
+        const pTime = new Date(p.timestamp).getTime();
+        return (now - pTime) < 120000; // 2 menit terakhir
+      }).length;
+
+      // Jeda dinamis: 15 detik + (15 detik * jumlah orang yang mendaftar bersamaan)
+      // Jika orang ke-5 mendaftar, dia akan menunggu 15 + (4 * 15) = 75 detik.
+      const dynamicDelay = 15000 + (recentBursts * 15000);
+      
+      console.log(`WhatsApp untuk ${newParticipant.queueNumber} akan dikirim dalam ${dynamicDelay / 1000} detik...`);
+      
+      await delay(dynamicDelay);
       
       try {
         const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`;
@@ -157,6 +171,8 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
         const waResult = await waResponse.json();
         if (!waResult.success) {
           console.error("WhatsApp Background Send Error:", waResult.error);
+        } else {
+          console.log(`WhatsApp terkirim untuk ${newParticipant.queueNumber}`);
         }
       } catch (err) {
         console.error("Critical Background WhatsApp Error:", err);
