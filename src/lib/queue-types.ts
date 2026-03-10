@@ -13,6 +13,7 @@ export interface Participant {
   staffName?: string;
   serveStartTime?: string;
   serveEndTime?: string;
+  whatsappSentAt?: string;
 }
 
 export interface CounterClerk {

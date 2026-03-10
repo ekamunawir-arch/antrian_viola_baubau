@@ -152,8 +152,6 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
           }
 
           // Aturan: Jeda minimal 45 detik antar pesan dari SIAPA PUN di sistem
-          // Jika sekarang sudah lewat 45 detik dari pengiriman terakhir, mulai dalam 10 detik
-          // Jika belum, tambahkan 45 detik dari jadwal terakhir
           const scheduledFor = Math.max(now + 10000, lastSentAt + 45000);
           
           transaction.update(settingsRef, { lastWhatsAppSentAt: scheduledFor });
@@ -178,6 +176,9 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
 
         const waResult = await waResponse.json();
         if (waResult.success) {
+          // Catat waktu pengiriman nyata ke Firestore
+          const pRef = doc(db, 'participants', newParticipant.id);
+          await updateDoc(pRef, { whatsappSentAt: new Date().toISOString() });
           console.log(`WhatsApp terkirim untuk ${newParticipant.queueNumber} sesuai jadwal.`);
         } else {
           console.error(`Gagal mengirim WhatsApp: ${waResult.error}`);
