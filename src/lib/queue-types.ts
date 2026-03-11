@@ -14,6 +14,8 @@ export interface Participant {
   serveStartTime?: string;
   serveEndTime?: string;
   whatsappSentAt?: string;
+  calledAt?: string; // Ditambahkan untuk integrasi Viola Tracker
+  finishAt?: string; // Ditambahkan untuk integrasi Viola Tracker
 }
 
 export interface CounterClerk {
