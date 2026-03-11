@@ -20,12 +20,10 @@ export default function PublicDashboard() {
     setCurrentTime(new Date());
     fetchData();
     
-    // Interval waktu jam
     const clockInterval = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
-    // Sinkronisasi real-time setiap 15 detik untuk menangkap perubahan dari Viola Tracker
     const syncInterval = setInterval(() => {
       refreshQueueData();
     }, 15000);
@@ -50,16 +48,19 @@ export default function PublicDashboard() {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Batasi daftar yang sedang dilayani agar layar tidak scroll (maks 3)
-  const beingServedList = participants.filter(p => p.status === 'Being Served').slice(0, 3);
-  // Batasi daftar selesai (maks 4)
+  // Mendukung status 'Being Served' atau 'Called'/'called'
+  const beingServedList = participants.filter(p => 
+    p.status === 'Being Served' || 
+    p.status === 'Called' || 
+    p.status === 'called'
+  ).slice(0, 3);
+  
   const finishedParticipants = participants.filter(p => p.status === 'Finished').slice(-4).reverse();
   const nextInQueue = participants.find(p => p.status === 'Waiting');
   const totalToday = participants.length;
 
   return (
     <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden">
-      {/* Header - Kembali ke ukuran normal */}
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
         <div className="space-y-1">
           <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
@@ -76,7 +77,6 @@ export default function PublicDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
-        {/* Main Panel: Video Player */}
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
           <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900">
@@ -93,7 +93,6 @@ export default function PublicDashboard() {
             </CardContent>
           </Card>
 
-          {/* Bottom Bar: Queue Summary - Ukuran Normal */}
           <div className="bg-white p-6 rounded-3xl shadow-md border-2 border-dashed border-primary/30 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-6">
               <div className="bg-primary/10 p-4 rounded-2xl">
@@ -118,10 +117,7 @@ export default function PublicDashboard() {
           </div>
         </div>
 
-        {/* Sidebar: Information Panels - Ukuran Normal */}
         <div className="lg:col-span-4 flex flex-col gap-6 min-h-0">
-          
-          {/* Part 1: Currently Serving */}
           <Card className="bg-white shadow-xl border-t-8 border-t-primary overflow-hidden flex flex-col shrink-0">
             <div className="bg-primary/5 p-4 border-b flex items-center gap-3 shrink-0">
               <PlayCircle className="w-6 h-6 text-primary" />
@@ -146,7 +142,7 @@ export default function PublicDashboard() {
                           <User className="w-4 h-4" /> {p.staffName || 'Petugas'}
                         </span>
                         <span className="text-sky-300">
-                          <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.serveStartTime || '', currentTime)}
+                          <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.serveStartTime || p.timestamp, currentTime)}
                         </span>
                       </div>
                     </div>
@@ -161,7 +157,6 @@ export default function PublicDashboard() {
             </CardContent>
           </Card>
 
-          {/* Part 2: Recently Finished */}
           <Card className="flex-1 bg-white shadow-xl border-none overflow-hidden flex flex-col min-h-0">
             <div className="bg-slate-50 p-4 border-b flex items-center gap-3 shrink-0">
               <ListChecks className="w-6 h-6 text-slate-500" />
@@ -178,7 +173,7 @@ export default function PublicDashboard() {
                       <div className="flex justify-between items-start">
                         <p className="text-base font-bold truncate leading-none">{p.fullName}</p>
                         <span className="text-xs font-black text-emerald-600">
-                           {calculateDuration(p.serveStartTime || '', p.serveEndTime || null)}
+                           {calculateDuration(p.serveStartTime || p.timestamp, p.serveEndTime || null)}
                         </span>
                       </div>
                       <p className="text-[10px] font-black text-muted-foreground uppercase mt-1 tracking-wider">{p.serviceType}</p>
@@ -192,7 +187,6 @@ export default function PublicDashboard() {
               )}
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>

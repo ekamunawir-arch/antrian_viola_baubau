@@ -63,7 +63,6 @@ export default function ParticipantIntake() {
   const [dailyQuota, setDailyQuota] = useState(20);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // States for confirmation dialog
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingData, setPendingData] = useState<FormValues | null>(null);
 
@@ -81,12 +80,20 @@ export default function ParticipantIntake() {
     const settings = getSettings();
     setDailyQuota(settings.dailyQuota);
     setIsFull(participants.length >= settings.dailyQuota);
+    
+    // Filter untuk menampilkan yang sedang dilayani atau dipanggil (Called)
+    const activeParticipants = participants.filter(p => 
+      p.status === 'Being Served' || 
+      p.status === 'Called' || 
+      p.status === 'called'
+    );
+
     setQueueInfo({
       total: participants.length,
       waiting: participants.filter(p => p.status === 'Waiting').length,
       served: participants.filter(p => p.status === 'Finished').length,
       absent: 0, 
-      current: participants.filter(p => p.status === 'Being Served').slice(0, 3),
+      current: activeParticipants.slice(0, 3),
       lastFinished: [...participants].reverse().find(p => p.status === 'Finished') || null
     });
   };
@@ -95,7 +102,6 @@ export default function ParticipantIntake() {
     setMounted(true);
     updateQueueInfo();
     
-    // Sinkronisasi real-time setiap 15 detik untuk menangkap perubahan dari Viola Tracker
     const syncInterval = setInterval(() => {
       refreshQueueData();
     }, 15000);
@@ -149,7 +155,6 @@ export default function ParticipantIntake() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
-      {/* Header Bar */}
       <header className="bg-[#005a78] text-white p-4 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
           <div className="bg-white text-[#005a78] p-2 rounded-xl font-black text-2xl">Q</div>
@@ -169,8 +174,6 @@ export default function ParticipantIntake() {
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Column: Form or Success */}
         <div className="lg:col-span-7">
           {step === 'form' ? (
             <Card className="shadow-2xl border-none rounded-3xl overflow-hidden bg-white">
@@ -299,7 +302,6 @@ export default function ParticipantIntake() {
           )}
         </div>
 
-        {/* Right Column: Queue Information */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex items-end justify-between">
             <div className="space-y-1">
@@ -376,10 +378,8 @@ export default function ParticipantIntake() {
             ))}
           </div>
         </div>
-
       </main>
 
-      {/* Confirmation Dialog */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent className="rounded-[2.5rem] max-w-[420px] p-8 border-none shadow-2xl overflow-hidden">
           <AlertDialogHeader className="space-y-4">
@@ -420,7 +420,6 @@ export default function ParticipantIntake() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Footer Bar */}
       <footer className="bg-emerald-500 text-white p-3 text-center text-xs font-bold tracking-widest shadow-inner mt-12">
         VIOLA Virtual Office Layanan Peserta © 2024 - BPJS Kesehatan
       </footer>

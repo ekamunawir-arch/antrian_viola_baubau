@@ -1,6 +1,6 @@
 export type ServiceType = 'Pendaftaran Peserta' | 'Perubahan data' | 'Informasi & Pengaduan';
 
-export type QueueStatus = 'Waiting' | 'Being Served' | 'Finished';
+export type QueueStatus = 'Waiting' | 'Being Served' | 'Finished' | 'Called' | 'called';
 
 export interface Participant {
   id: string;
