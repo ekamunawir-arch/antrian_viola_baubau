@@ -221,11 +221,13 @@ export const updateParticipantStatus = async (id: string, status: Participant['s
   const docRef = doc(db, 'participants', id);
   
   const updates: any = { status };
-  if (status === 'Being Served') {
+  if (status === 'Being Served' || status === 'Called' || status === 'called') {
     updates.serveStartTime = now;
+    updates.calledAt = now; // Sinkronisasi field untuk integrasi tracker
     updates.staffName = staffName || 'Admin VIOLA';
   } else if (status === 'Finished') {
     updates.serveEndTime = now;
+    updates.finishAt = now; // Sinkronisasi field untuk integrasi tracker
   }
 
   await updateDoc(docRef, updates);

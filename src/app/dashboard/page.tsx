@@ -47,7 +47,7 @@ export default function PublicDashboard() {
     }
     
     // Cek jika ini adalah ISO String atau string tanggal lainnya
-    if (typeof val === 'string') {
+    if (typeof val === 'string' && val.trim() !== '') {
       const d = new Date(val);
       return isNaN(d.getTime()) ? null : d;
     }
@@ -59,6 +59,7 @@ export default function PublicDashboard() {
     const start = parseDate(startTime);
     const end = parseDate(endTime);
     
+    // Jika tidak ada waktu mulai atau selesai, kembalikan 00:00:00
     if (!start || !end) return '00:00:00';
     
     const diffInSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
