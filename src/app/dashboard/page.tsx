@@ -5,12 +5,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle } from 'lucide-react';
 
 export default function PublicDashboard() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [videoError, setVideoError] = useState(false);
 
   const fetchData = () => {
     const data = getQueueData();
@@ -42,44 +43,30 @@ export default function PublicDashboard() {
   const parseDate = (val: any): Date | null => {
     if (!val) return null;
     if (val instanceof Date) return val;
-    
-    // Handle Firestore Timestamp object
     if (typeof val === 'object') {
       if (val.seconds !== undefined) return new Date(val.seconds * 1000);
       if (val._seconds !== undefined) return new Date(val._seconds * 1000);
     }
-    
-    // Handle ISO string
     if (typeof val === 'string' && val.trim() !== '') {
       const d = new Date(val);
       return isNaN(d.getTime()) ? null : d;
     }
-    
     return null;
   };
 
   const calculateDuration = (startTime: any, endTime: any) => {
     const start = parseDate(startTime);
-    // Jika endTime eksplisit null, gunakan waktu sekarang (untuk timer berjalan)
     const end = (endTime === null || endTime === undefined) ? currentTime : parseDate(endTime);
-    
     if (!start || !end) return '00:00:00';
-    
     const diffInSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
-    
     const hours = Math.floor(diffInSeconds / 3600);
     const minutes = Math.floor((diffInSeconds % 3600) / 60);
     const seconds = diffInSeconds % 60;
-    
-    return [hours, minutes, seconds]
-      .map(v => v.toString().padStart(2, '0'))
-      .join(':');
+    return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
   };
 
   const beingServedList = participants.filter(p => 
-    p.status === 'Being Served' || 
-    p.status === 'Called' || 
-    p.status === 'called'
+    p.status === 'Being Served' || p.status === 'Called' || p.status === 'called'
   ).slice(0, 3);
   
   const finishedParticipants = participants.filter(p => p.status === 'Finished').slice(-4).reverse();
@@ -107,7 +94,7 @@ export default function PublicDashboard() {
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
           <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900 overflow-hidden">
-              {settings?.videoUrl ? (
+              {settings?.videoUrl && !videoError ? (
                 <video 
                   key={settings.videoUrl}
                   className="w-full h-full object-cover" 
@@ -117,15 +104,27 @@ export default function PublicDashboard() {
                   muted 
                   playsInline
                   preload="auto"
+                  onError={() => setVideoError(true)}
+                  onLoadedData={() => setVideoError(false)}
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-white/10">
-                  <MonitorPlay className="w-32 h-32 mb-6" />
-                  <p className="text-xl font-black uppercase tracking-[0.5em]">Saluran Multimedia VIOLA</p>
+                <div className="w-full h-full flex flex-col items-center justify-center text-white/10 p-10 text-center">
+                  {videoError ? (
+                    <>
+                      <AlertCircle className="w-24 h-24 mb-4 text-rose-500/50" />
+                      <p className="text-lg font-black uppercase text-rose-500/50">File Video Tidak Ditemukan</p>
+                      <p className="text-xs mt-2 text-white/20">Pastikan file ada di folder: <code className="bg-white/5 px-2 py-1 rounded">public{settings?.videoUrl}</code></p>
+                    </>
+                  ) : (
+                    <>
+                      <MonitorPlay className="w-32 h-32 mb-6" />
+                      <p className="text-xl font-black uppercase tracking-[0.5em]">Saluran Multimedia VIOLA</p>
+                    </>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-10">
                     <div className="flex items-center gap-4 text-white">
                       <div className="w-4 h-4 bg-red-600 rounded-full animate-pulse" />
-                      <span className="text-sm font-black uppercase tracking-widest">Siaran Langsung Informasi & Edukasi</span>
+                      <span className="text-sm font-black uppercase tracking-widest">Siaran Informasi & Edukasi</span>
                     </div>
                   </div>
                 </div>
@@ -166,9 +165,9 @@ export default function PublicDashboard() {
             <CardContent className="p-4 space-y-4 overflow-hidden">
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
-                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg transform hover:scale-[1.02] transition-all">
-                    <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center text-xl font-black shrink-0 border border-white/20 overflow-hidden">
-                      <span className="whitespace-nowrap px-1 text-xl">{p.queueNumber}</span>
+                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg">
+                    <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center border border-white/20 shrink-0">
+                      <span className="text-xl font-black whitespace-nowrap px-1">{p.queueNumber}</span>
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
@@ -206,8 +205,8 @@ export default function PublicDashboard() {
               {finishedParticipants.length > 0 ? (
                 finishedParticipants.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-base font-black shrink-0 overflow-hidden">
-                      <span className="whitespace-nowrap px-1 text-base">{p.queueNumber}</span>
+                    <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-base font-black whitespace-nowrap px-1">{p.queueNumber}</span>
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-start">

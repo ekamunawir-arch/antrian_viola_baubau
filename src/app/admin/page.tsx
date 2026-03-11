@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -19,7 +18,8 @@ import {
   FileVideo,
   Play,
   Search,
-  FolderOpen
+  FolderOpen,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,6 +30,7 @@ import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -38,11 +39,8 @@ export default function AdminDashboard() {
   const [password, setPassword] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [lastSync, setLastSync] = useState(new Date());
-  
-  // Set default active tab to 'settings'
   const [activeTab, setActiveTab] = useState<'dashboard' | 'settings'>('settings');
   
-  // Settings state
   const [dailyQuota, setDailyQuota] = useState(20);
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
   const [videoUrl, setVideoUrl] = useState('');
@@ -84,12 +82,10 @@ export default function AdminDashboard() {
   const handleFileBrowse = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Browsers don't provide the full local path for security reasons.
-      // We assume the file is in the /video/ directory of the public folder.
       setVideoUrl(`/video/${file.name}`);
       toast({ 
         title: "File Dipilih", 
-        description: `Path disetel ke /video/${file.name}. Pastikan file ada di folder tersebut.` 
+        description: `Path disetel ke /video/${file.name}. Jangan lupa pindahkan file asli ke folder public/video/.` 
       });
     }
   };
@@ -107,7 +103,6 @@ export default function AdminDashboard() {
       p.status,
       p.servedBy || p.staffName || "-"
     ]);
-    
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -188,7 +183,6 @@ export default function AdminDashboard() {
 
         {activeTab === 'dashboard' ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-            {/* Panel Ringkasan Monitoring */}
             <Card className="md:col-span-2 shadow-sm border-none bg-gradient-to-br from-white to-slate-50">
                <CardHeader className="pb-4">
                  <CardTitle className="text-xl font-black text-primary uppercase tracking-tight">Status Monitoring</CardTitle>
@@ -251,25 +245,6 @@ export default function AdminDashboard() {
                   )}
                 </CardContent>
               </Card>
-
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Antrian Berikutnya</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {participants.find(p => p.status === 'Waiting') ? (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-3xl font-black text-muted-foreground">{participants.find(p => p.status === 'Waiting')?.queueNumber}</div>
-                        <div className="font-semibold">{participants.find(p => p.status === 'Waiting')?.fullName}</div>
-                      </div>
-                      <ChevronRight className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground italic text-sm">Semua antrian telah diproses.</div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
         ) : (
@@ -290,10 +265,8 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent className="space-y-8 pt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Quota Setting */}
                   <div className="space-y-2">
                     <Label htmlFor="quota" className="text-sm font-black text-primary uppercase tracking-wider">Kuota Antrian Harian</Label>
-                    <p className="text-xs text-muted-foreground">Maksimal pendaftar per hari.</p>
                     <div className="flex items-center gap-4 mt-2">
                       <Input 
                         id="quota"
@@ -305,11 +278,8 @@ export default function AdminDashboard() {
                       <div className="text-muted-foreground font-medium text-sm">Peserta</div>
                     </div>
                   </div>
-
-                  {/* Zoom Link Setting */}
                   <div className="space-y-2">
                     <Label htmlFor="zoom" className="text-sm font-black text-primary uppercase tracking-wider">Link Zoom Layanan</Label>
-                    <p className="text-xs text-muted-foreground">Link yang akan dikirim ke WhatsApp peserta.</p>
                     <div className="relative mt-2">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
                         <Video className="w-4 h-4" />
@@ -326,12 +296,9 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Video URL Setting */}
-                <div className="space-y-2 border-t pt-6">
+                <div className="space-y-4 border-t pt-6">
                   <Label htmlFor="videoUrl" className="text-sm font-black text-primary uppercase tracking-wider">Path Video Dashboard</Label>
-                  <p className="text-xs text-muted-foreground">Pilih file video dari komputer Anda (Pastikan file berada di folder public/video)</p>
-                  
-                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
                         <FileVideo className="w-4 h-4" />
@@ -345,7 +312,6 @@ export default function AdminDashboard() {
                         className="h-12 pl-12 rounded-xl text-sm font-medium bg-slate-50"
                       />
                     </div>
-                    
                     <input 
                       type="file" 
                       ref={fileInputRef} 
@@ -353,7 +319,6 @@ export default function AdminDashboard() {
                       accept="video/*" 
                       onChange={handleFileBrowse}
                     />
-                    
                     <Button 
                       type="button" 
                       variant="outline" 
@@ -363,6 +328,15 @@ export default function AdminDashboard() {
                       <FolderOpen className="w-4 h-4" /> Browse
                     </Button>
                   </div>
+
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <Info className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800 font-bold">Langkah Wajib!</AlertTitle>
+                    <AlertDescription className="text-amber-700 text-xs">
+                      Setelah memilih file lewat tombol <strong>Browse</strong>, Anda harus menyalin file video tersebut secara manual ke folder: <br/>
+                      <code className="font-bold bg-white/50 px-1">public/video/</code> di dalam direktori project Anda.
+                    </AlertDescription>
+                  </Alert>
                 </div>
 
                 <div className="pt-6 border-t">
@@ -375,7 +349,6 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
-
       <Toaster />
     </div>
   );
