@@ -1,18 +1,21 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function PublicDashboard() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [videoError, setVideoError] = useState(false);
+  const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
 
   const fetchData = () => {
     const data = getQueueData();
@@ -34,12 +37,29 @@ export default function PublicDashboard() {
     }, 15000);
 
     window.addEventListener('viola_storage_update', fetchData);
+    
     return () => {
       clearInterval(clockInterval);
       clearInterval(syncInterval);
       window.removeEventListener('viola_storage_update', fetchData);
+      // Cleanup blob URL to prevent memory leaks
+      if (localVideoUrl) {
+        URL.revokeObjectURL(localVideoUrl);
+      }
     };
-  }, []);
+  }, [localVideoUrl]);
+
+  const handleLocalVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (localVideoUrl) {
+        URL.revokeObjectURL(localVideoUrl);
+      }
+      const url = URL.createObjectURL(file);
+      setLocalVideoUrl(url);
+      setVideoError(false);
+    }
+  };
 
   const parseDate = (val: any): Date | null => {
     if (!val) return null;
@@ -74,6 +94,8 @@ export default function PublicDashboard() {
   const nextInQueue = participants.find(p => p.status === 'Waiting');
   const totalToday = participants.length;
 
+  const currentVideoSource = localVideoUrl || (settings?.videoUrl ? encodeURI(settings.videoUrl) : null);
+
   return (
     <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden">
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
@@ -94,12 +116,12 @@ export default function PublicDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
           <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
-            <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900 overflow-hidden">
-              {settings?.videoUrl && !videoError ? (
+            <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900 overflow-hidden relative">
+              {currentVideoSource && !videoError ? (
                 <video 
-                  key={settings.videoUrl}
+                  key={currentVideoSource}
                   className="w-full h-full object-cover" 
-                  src={encodeURI(settings.videoUrl)} 
+                  src={currentVideoSource} 
                   autoPlay 
                   loop 
                   muted 
@@ -113,17 +135,8 @@ export default function PublicDashboard() {
                   {videoError ? (
                     <>
                       <AlertCircle className="w-24 h-24 mb-4 text-rose-500/50" />
-                      <p className="text-lg font-black uppercase text-rose-500/50">File Video Tidak Ditemukan</p>
-                      <div className="text-xs mt-4 text-white/40 space-y-2 max-w-md">
-                        <p>Aplikasi mencoba memanggil:</p>
-                        <code className="bg-white/5 px-2 py-1 rounded block break-all text-rose-300">
-                          {settings?.videoUrl}
-                        </code>
-                        <p className="mt-4 pt-4 border-t border-white/5">
-                          Pastikan file ada di folder: <br/>
-                          <span className="font-bold text-white/60 underline">public{settings?.videoUrl}</span>
-                        </p>
-                      </div>
+                      <p className="text-lg font-black uppercase text-rose-500/50">Video Tidak Dapat Diputar</p>
+                      <p className="text-xs mt-2 text-white/40">Silakan pilih file video lokal menggunakan tombol di bawah.</p>
                     </>
                   ) : (
                     <>
@@ -131,14 +144,35 @@ export default function PublicDashboard() {
                       <p className="text-xl font-black uppercase tracking-[0.5em]">Saluran Multimedia VIOLA</p>
                     </>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-10">
-                    <div className="flex items-center gap-4 text-white">
-                      <div className="w-4 h-4 bg-red-600 rounded-full animate-pulse" />
-                      <span className="text-sm font-black uppercase tracking-widest">Siaran Informasi & Edukasi</span>
-                    </div>
-                  </div>
                 </div>
               )}
+
+              {/* Local Video Picker Button */}
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <input 
+                  type="file" 
+                  accept="video/*" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  onChange={handleLocalVideoSelect}
+                />
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="rounded-full bg-black/50 hover:bg-black/80 text-white border-none backdrop-blur-md"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <FileVideo className="w-4 h-4 mr-2" />
+                  Pilih Video Lokal
+                </Button>
+              </div>
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-10 pointer-events-none">
+                <div className="flex items-center gap-4 text-white">
+                  <div className="w-4 h-4 bg-red-600 rounded-full animate-pulse" />
+                  <span className="text-sm font-black uppercase tracking-widest">Siaran Informasi & Edukasi</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
