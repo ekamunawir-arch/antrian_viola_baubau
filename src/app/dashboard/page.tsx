@@ -55,11 +55,9 @@ export default function PublicDashboard() {
 
   const calculateDuration = (startTime: any, endTime: any) => {
     const start = parseDate(startTime);
-    let end = parseDate(endTime);
-    
-    if (endTime === null) {
-      end = currentTime;
-    }
+    // Jika endTime eksplisit null, gunakan waktu sekarang (untuk timer berjalan)
+    // Jika endTime undefined/tidak ada, parseDate akan menghasilkan null
+    let end = (endTime === null) ? currentTime : parseDate(endTime);
     
     if (!start || !end) return '00:00:00';
     
@@ -164,7 +162,7 @@ export default function PublicDashboard() {
                       </div>
                       <div className="flex items-center justify-between text-xs font-black">
                         <span className="flex items-center gap-1 opacity-80">
-                          <User className="w-4 h-4" /> {p.servedBy || 'Petugas'}
+                          <User className="w-4 h-4" /> {p.servedBy || p.staffName || 'Petugas'}
                         </span>
                         <span className="text-sky-300">
                           <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, null)}
@@ -198,7 +196,7 @@ export default function PublicDashboard() {
                       <div className="flex justify-between items-start">
                         <p className="text-base font-bold truncate leading-none">{p.fullName}</p>
                         <span className="text-xs font-black text-emerald-600">
-                           {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.serveEndTime)}
+                           {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.finishedAt || p.finishAt || p.serveEndTime)}
                         </span>
                       </div>
                       <p className="text-[10px] font-black text-muted-foreground uppercase mt-1 tracking-wider">{p.serviceType}</p>
