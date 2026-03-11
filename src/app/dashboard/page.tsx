@@ -57,7 +57,6 @@ export default function PublicDashboard() {
     const start = parseDate(startTime);
     let end = parseDate(endTime);
     
-    // Jika endTime eksplisit NULL, gunakan waktu berjalan (ticking)
     if (endTime === null) {
       end = currentTime;
     }
@@ -153,7 +152,7 @@ export default function PublicDashboard() {
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg transform hover:scale-[1.02] transition-all">
-                    <div className="bg-white/10 text-white w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-black shrink-0 border border-white/20">
+                    <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center text-2xl font-black shrink-0 border border-white/20">
                       {p.queueNumber}
                     </div>
                     <div className="flex-1 overflow-hidden">
@@ -165,7 +164,7 @@ export default function PublicDashboard() {
                       </div>
                       <div className="flex items-center justify-between text-xs font-black">
                         <span className="flex items-center gap-1 opacity-80">
-                          <User className="w-4 h-4" /> {p.staffName || 'Petugas'}
+                          <User className="w-4 h-4" /> {p.servedBy || 'Petugas'}
                         </span>
                         <span className="text-sky-300">
                           <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, null)}
@@ -199,7 +198,7 @@ export default function PublicDashboard() {
                       <div className="flex justify-between items-start">
                         <p className="text-base font-bold truncate leading-none">{p.fullName}</p>
                         <span className="text-xs font-black text-emerald-600">
-                           {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.finishedAt || p.serveEndTime)}
+                           {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.serveEndTime)}
                         </span>
                       </div>
                       <p className="text-[10px] font-black text-muted-foreground uppercase mt-1 tracking-wider">{p.serviceType}</p>

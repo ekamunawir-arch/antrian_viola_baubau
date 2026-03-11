@@ -11,6 +11,7 @@ export interface Participant {
   timestamp: string;
   status: QueueStatus;
   staffName?: string;
+  servedBy?: string;
   serveStartTime?: string;
   serveEndTime?: string;
   whatsappSentAt?: string;
