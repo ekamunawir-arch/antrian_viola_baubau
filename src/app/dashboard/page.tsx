@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -36,17 +37,21 @@ export default function PublicDashboard() {
     };
   }, []);
 
-  // Fungsi pembantu untuk menangani berbagai format tanggal (ISO string atau Firestore Timestamp)
+  /**
+   * Helper robust untuk memparsing berbagai format tanggal dari Firebase
+   * Mendukung: ISO String, Date Object, Firestore Timestamp (seconds/nanoseconds)
+   */
   const parseDate = (val: any): Date | null => {
     if (!val) return null;
     if (val instanceof Date) return val;
     
-    // Cek jika ini adalah Firestore Timestamp object (memiliki properti seconds)
-    if (typeof val === 'object' && val.seconds !== undefined) {
-      return new Date(val.seconds * 1000);
+    // Penanganan Firestore Timestamp Object
+    if (typeof val === 'object') {
+      if (val.seconds !== undefined) return new Date(val.seconds * 1000);
+      if (val._seconds !== undefined) return new Date(val._seconds * 1000);
     }
     
-    // Cek jika ini adalah ISO String atau string tanggal lainnya
+    // Penanganan String ISO atau format tanggal lainnya
     if (typeof val === 'string' && val.trim() !== '') {
       const d = new Date(val);
       return isNaN(d.getTime()) ? null : d;
@@ -55,13 +60,17 @@ export default function PublicDashboard() {
     return null;
   };
 
+  /**
+   * Menghitung selisih waktu antara dua titik
+   * Jika endTime tidak ada, gunakan currentTime (untuk timer berjalan)
+   */
   const calculateDuration = (startTime: any, endTime: any) => {
     const start = parseDate(startTime);
-    const end = parseDate(endTime);
+    const end = parseDate(endTime) || currentTime;
     
-    // Jika tidak ada waktu mulai atau selesai, kembalikan 00:00:00
     if (!start || !end) return '00:00:00';
     
+    // Hitung selisih dalam detik
     const diffInSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
     
     const hours = Math.floor(diffInSeconds / 3600);
@@ -73,19 +82,21 @@ export default function PublicDashboard() {
       .join(':');
   };
 
-  // Mendukung status 'Being Served' atau 'Called'/'called'
+  // Status yang dianggap "Sedang Dilayani" termasuk status dari Tracker
   const beingServedList = participants.filter(p => 
     p.status === 'Being Served' || 
     p.status === 'Called' || 
     p.status === 'called'
   ).slice(0, 3);
   
+  // Ambil 4 antrian terakhir yang selesai
   const finishedParticipants = participants.filter(p => p.status === 'Finished').slice(-4).reverse();
   const nextInQueue = participants.find(p => p.status === 'Waiting');
   const totalToday = participants.length;
 
   return (
     <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden">
+      {/* Header Dashboard */}
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
         <div className="space-y-1">
           <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
@@ -102,6 +113,7 @@ export default function PublicDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
+        {/* Konten Kiri: Video & Informasi Global */}
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
           <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900">
@@ -142,7 +154,9 @@ export default function PublicDashboard() {
           </div>
         </div>
 
+        {/* Konten Kanan: List Antrian */}
         <div className="lg:col-span-4 flex flex-col gap-6 min-h-0">
+          {/* Sedang Dilayani */}
           <Card className="bg-white shadow-xl border-t-8 border-t-primary overflow-hidden flex flex-col shrink-0">
             <div className="bg-primary/5 p-4 border-b flex items-center gap-3 shrink-0">
               <PlayCircle className="w-6 h-6 text-primary" />
@@ -167,7 +181,7 @@ export default function PublicDashboard() {
                           <User className="w-4 h-4" /> {p.staffName || 'Petugas'}
                         </span>
                         <span className="text-sky-300">
-                          <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, currentTime)}
+                          <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, null)}
                         </span>
                       </div>
                     </div>
@@ -182,6 +196,7 @@ export default function PublicDashboard() {
             </CardContent>
           </Card>
 
+          {/* Antrian Selesai */}
           <Card className="flex-1 bg-white shadow-xl border-none overflow-hidden flex flex-col min-h-0">
             <div className="bg-slate-50 p-4 border-b flex items-center gap-3 shrink-0">
               <ListChecks className="w-6 h-6 text-slate-500" />
@@ -198,7 +213,7 @@ export default function PublicDashboard() {
                       <div className="flex justify-between items-start">
                         <p className="text-base font-bold truncate leading-none">{p.fullName}</p>
                         <span className="text-xs font-black text-emerald-600">
-                           {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.finishAt || p.serveEndTime || null)}
+                           {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.finishAt || p.serveEndTime)}
                         </span>
                       </div>
                       <p className="text-[10px] font-black text-muted-foreground uppercase mt-1 tracking-wider">{p.serviceType}</p>
