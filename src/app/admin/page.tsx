@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   Plus,
   Trash2,
-  Users
+  Users,
+  Timer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -67,6 +68,8 @@ export default function AdminDashboard() {
   
   // Dashboard state
   const [activeClerkId, setActiveClerkId] = useState<string>('');
+  const [isCalling, setIsCalling] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   
   // Dialog state
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -131,11 +134,31 @@ export default function AdminDashboard() {
   };
 
   const handleCall = async (p: Participant) => {
+    if (isCalling) return;
+
     const clerk = clerks.find(c => c.id === activeClerkId);
     if (!clerk) {
       toast({ variant: "destructive", title: "Petugas Belum Dipilih", description: "Silakan pilih petugas loket terlebih dahulu." });
       return;
     }
+
+    // Aktifkan cooldown 10 detik
+    setIsCalling(true);
+    setCooldown(10);
+    
+    const timer = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    setTimeout(() => {
+      setIsCalling(false);
+    }, 10000);
 
     updateParticipantStatus(p.id, 'Being Served', clerk.name);
     
@@ -371,14 +394,33 @@ export default function AdminDashboard() {
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
                                 {p.status === 'Waiting' && (
-                                  <Button size="sm" onClick={() => handleCall(p)} className="bg-blue-600 hover:bg-blue-700 h-8">
-                                    <Play className="w-3 h-3 mr-1" /> Panggil
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => handleCall(p)} 
+                                    disabled={isCalling}
+                                    className="bg-blue-600 hover:bg-blue-700 h-8 w-24"
+                                  >
+                                    {isCalling ? (
+                                      <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {cooldown}s</span>
+                                    ) : (
+                                      <span className="flex items-center"><Play className="w-3 h-3 mr-1" /> Panggil</span>
+                                    )}
                                   </Button>
                                 )}
                                 {p.status === 'Being Served' && (
                                   <>
-                                    <Button size="sm" variant="outline" onClick={() => handleCall(p)} className="h-8">
-                                      <Play className="w-3 h-3 mr-1" /> Ulangi
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      onClick={() => handleCall(p)} 
+                                      disabled={isCalling}
+                                      className="h-8 w-24"
+                                    >
+                                      {isCalling ? (
+                                        <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {cooldown}s</span>
+                                      ) : (
+                                        <span className="flex items-center"><Play className="w-3 h-3 mr-1" /> Ulangi</span>
+                                      )}
                                     </Button>
                                     <Button size="sm" onClick={() => handleFinish(p.id)} className="bg-green-600 hover:bg-green-700 h-8">
                                       <CheckCircle className="w-3 h-3 mr-1" /> Selesai
