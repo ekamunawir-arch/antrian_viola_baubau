@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Monitor, 
@@ -16,7 +17,9 @@ import {
   Video,
   User,
   FileVideo,
-  Play
+  Play,
+  Search,
+  FolderOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,6 +33,7 @@ import { Label } from '@/components/ui/label';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -75,6 +79,19 @@ export default function AdminDashboard() {
     saveSettings({ dailyQuota, zoomLink, clerks, videoUrl });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
+  };
+
+  const handleFileBrowse = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Browsers don't provide the full local path for security reasons.
+      // We assume the file is in the /video/ directory of the public folder.
+      setVideoUrl(`/video/${file.name}`);
+      toast({ 
+        title: "File Dipilih", 
+        description: `Path disetel ke /video/${file.name}. Pastikan file ada di folder tersebut.` 
+      });
+    }
   };
 
   const downloadCSV = () => {
@@ -312,19 +329,39 @@ export default function AdminDashboard() {
                 {/* Video URL Setting */}
                 <div className="space-y-2 border-t pt-6">
                   <Label htmlFor="videoUrl" className="text-sm font-black text-primary uppercase tracking-wider">Path Video Dashboard</Label>
-                  <p className="text-xs text-muted-foreground">Masukkan path file video lokal (Contoh: /video/promo.mp4)</p>
-                  <div className="relative mt-2">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <FileVideo className="w-4 h-4" />
+                  <p className="text-xs text-muted-foreground">Pilih file video dari komputer Anda (Pastikan file berada di folder public/video)</p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                    <div className="relative flex-1">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <FileVideo className="w-4 h-4" />
+                      </div>
+                      <Input 
+                        id="videoUrl"
+                        type="text" 
+                        value={videoUrl} 
+                        onChange={(e) => setVideoUrl(e.target.value)}
+                        placeholder="/video/nama-file.mp4"
+                        className="h-12 pl-12 rounded-xl text-sm font-medium bg-slate-50"
+                      />
                     </div>
-                    <Input 
-                      id="videoUrl"
-                      type="text" 
-                      value={videoUrl} 
-                      onChange={(e) => setVideoUrl(e.target.value)}
-                      placeholder="/video/nama-file.mp4"
-                      className="h-12 pl-12 rounded-xl text-sm font-medium"
+                    
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="video/*" 
+                      onChange={handleFileBrowse}
                     />
+                    
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="h-12 rounded-xl px-6 font-bold flex gap-2 border-primary text-primary hover:bg-primary/5"
+                    >
+                      <FolderOpen className="w-4 h-4" /> Browse
+                    </Button>
                   </div>
                 </div>
 
