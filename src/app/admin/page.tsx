@@ -47,7 +47,9 @@ export default function AdminDashboard() {
   const [password, setPassword] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [lastSync, setLastSync] = useState(new Date());
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'settings'>('dashboard');
+  
+  // Set default active tab to 'settings'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'settings'>('settings');
   
   // Settings state
   const [dailyQuota, setDailyQuota] = useState(20);
