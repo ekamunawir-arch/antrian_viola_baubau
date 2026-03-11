@@ -153,7 +153,7 @@ export default function PublicDashboard() {
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg transform hover:scale-[1.02] transition-all">
-                    <div className="bg-white/10 text-white w-16 h-16 rounded-xl flex items-center justify-center text-3xl font-black shrink-0 border border-white/20">
+                    <div className="bg-white/10 text-white w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-black shrink-0 border border-white/20">
                       {p.queueNumber}
                     </div>
                     <div className="flex-1 overflow-hidden">
@@ -192,7 +192,7 @@ export default function PublicDashboard() {
               {finishedParticipants.length > 0 ? (
                 finishedParticipants.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black shrink-0">
+                    <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black shrink-0">
                       {p.queueNumber}
                     </div>
                     <div className="flex-1 overflow-hidden">
