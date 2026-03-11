@@ -36,15 +36,32 @@ export default function PublicDashboard() {
     };
   }, []);
 
-  const calculateDuration = (startTime: string | undefined, endTime: string | Date | null | undefined) => {
-    if (!startTime || !endTime) return '00:00:00';
+  // Fungsi pembantu untuk menangani berbagai format tanggal (ISO string atau Firestore Timestamp)
+  const parseDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Date) return val;
     
-    const start = new Date(startTime).getTime();
-    const end = typeof endTime === 'string' ? new Date(endTime).getTime() : endTime.getTime();
+    // Cek jika ini adalah Firestore Timestamp object (memiliki properti seconds)
+    if (typeof val === 'object' && val.seconds !== undefined) {
+      return new Date(val.seconds * 1000);
+    }
     
-    if (isNaN(start) || isNaN(end)) return '00:00:00';
+    // Cek jika ini adalah ISO String atau string tanggal lainnya
+    if (typeof val === 'string') {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
     
-    const diffInSeconds = Math.max(0, Math.floor((end - start) / 1000));
+    return null;
+  };
+
+  const calculateDuration = (startTime: any, endTime: any) => {
+    const start = parseDate(startTime);
+    const end = parseDate(endTime);
+    
+    if (!start || !end) return '00:00:00';
+    
+    const diffInSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
     
     const hours = Math.floor(diffInSeconds / 3600);
     const minutes = Math.floor((diffInSeconds % 3600) / 60);
