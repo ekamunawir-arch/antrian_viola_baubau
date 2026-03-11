@@ -61,7 +61,6 @@ export default function PublicDashboard() {
   const calculateDuration = (startTime: any, endTime: any) => {
     const start = parseDate(startTime);
     // Jika endTime eksplisit null, gunakan waktu sekarang (untuk timer berjalan)
-    // Cek juga field finishAt atau finishedAt yang mungkin dikirim Viola Tracker
     const end = (endTime === null || endTime === undefined) ? currentTime : parseDate(endTime);
     
     if (!start || !end) return '00:00:00';
@@ -110,12 +109,14 @@ export default function PublicDashboard() {
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900 overflow-hidden">
               {settings?.videoUrl ? (
                 <video 
+                  key={settings.videoUrl}
                   className="w-full h-full object-cover" 
                   src={settings.videoUrl} 
                   autoPlay 
                   loop 
                   muted 
                   playsInline
+                  preload="auto"
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-white/10">
@@ -166,8 +167,8 @@ export default function PublicDashboard() {
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg transform hover:scale-[1.02] transition-all">
-                    <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center text-xl font-black shrink-0 border border-white/20 whitespace-nowrap overflow-hidden">
-                      <span className="whitespace-nowrap px-1">{p.queueNumber}</span>
+                    <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center text-xl font-black shrink-0 border border-white/20 overflow-hidden">
+                      <span className="whitespace-nowrap px-1 text-xl">{p.queueNumber}</span>
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
@@ -205,8 +206,8 @@ export default function PublicDashboard() {
               {finishedParticipants.length > 0 ? (
                 finishedParticipants.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-base font-black shrink-0 whitespace-nowrap overflow-hidden">
-                      <span className="whitespace-nowrap px-1">{p.queueNumber}</span>
+                    <div className="bg-primary/10 text-primary w-12 h-12 rounded-xl flex items-center justify-center text-base font-black shrink-0 overflow-hidden">
+                      <span className="whitespace-nowrap px-1 text-base">{p.queueNumber}</span>
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-start">
