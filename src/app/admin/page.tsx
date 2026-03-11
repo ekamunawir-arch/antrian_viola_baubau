@@ -87,26 +87,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddClerk = () => {
-    const newClerk: CounterClerk = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: `Petugas ${clerks.length + 1}`
-    };
-    setClerks([...clerks, newClerk]);
-  };
-
-  const handleRemoveClerk = (id: string) => {
-    if (clerks.length <= 1) {
-      toast({ variant: "destructive", title: "Gagal Menghapus", description: "Minimal harus ada satu petugas loket." });
-      return;
-    }
-    setClerks(clerks.filter(c => c.id !== id));
-  };
-
-  const handleClerkNameChange = (id: string, name: string) => {
-    setClerks(clerks.map(c => c.id === id ? { ...c, name } : c));
-  };
-
   const handleSaveSettings = () => {
     saveSettings({ dailyQuota, zoomLink, clerks, videoUrl });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
@@ -214,7 +194,7 @@ export default function AdminDashboard() {
 
         {activeTab === 'dashboard' ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-            {/* Panel Ringkasan Monitoring - Pengganti Tabel Antrian */}
+            {/* Panel Ringkasan Monitoring */}
             <Card className="md:col-span-2 shadow-sm border-none bg-gradient-to-br from-white to-slate-50">
                <CardHeader className="pb-4">
                  <CardTitle className="text-xl font-black text-primary uppercase tracking-tight">Status Monitoring</CardTitle>
@@ -368,46 +348,6 @@ export default function AdminDashboard() {
                       placeholder="/video/nama-file.mp4"
                       className="h-12 pl-12 rounded-xl text-sm font-medium"
                     />
-                  </div>
-                </div>
-
-                {/* Clerks/Staff Setting */}
-                <div className="space-y-4 border-t pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-sm font-black text-primary uppercase tracking-wider">Manajemen Petugas Loket</Label>
-                      <p className="text-xs text-muted-foreground">Daftarkan nama petugas untuk setiap loket layanan.</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={handleAddClerk} className="rounded-full border-primary text-primary hover:bg-primary/5">
-                      <Plus className="w-4 h-4 mr-2" /> Tambah Loket
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {clerks.map((clerk, index) => (
-                      <div key={clerk.id} className="flex items-center gap-3 p-4 bg-muted/30 rounded-2xl border group transition-all hover:bg-white hover:shadow-md">
-                        <div className="bg-primary/10 text-primary w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nama Petugas</Label>
-                          <Input 
-                            value={clerk.name}
-                            onChange={(e) => handleClerkNameChange(clerk.id, e.target.value)}
-                            placeholder="Contoh: Budi Santoso"
-                            className="h-10 border-none bg-transparent p-0 focus-visible:ring-0 text-sm font-bold"
-                          />
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleRemoveClerk(clerk.id)}
-                          className="text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
                   </div>
                 </div>
 
