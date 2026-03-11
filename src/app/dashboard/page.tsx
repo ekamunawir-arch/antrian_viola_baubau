@@ -62,15 +62,19 @@ export default function PublicDashboard() {
 
   /**
    * Menghitung selisih waktu antara dua titik
-   * Jika endTime tidak ada, gunakan currentTime (untuk timer berjalan)
+   * Jika endTime secara eksplisit bernilai null, gunakan currentTime (untuk timer berjalan)
    */
   const calculateDuration = (startTime: any, endTime: any) => {
     const start = parseDate(startTime);
-    const end = parseDate(endTime) || currentTime;
+    // Logika baru: hanya gunakan currentTime jika endTime dikirim sebagai NULL (bukan undefined)
+    let end = parseDate(endTime);
+    
+    if (endTime === null) {
+      end = currentTime;
+    }
     
     if (!start || !end) return '00:00:00';
     
-    // Hitung selisih dalam detik
     const diffInSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
     
     const hours = Math.floor(diffInSeconds / 3600);
@@ -82,14 +86,12 @@ export default function PublicDashboard() {
       .join(':');
   };
 
-  // Status yang dianggap "Sedang Dilayani" termasuk status dari Tracker
   const beingServedList = participants.filter(p => 
     p.status === 'Being Served' || 
     p.status === 'Called' || 
     p.status === 'called'
   ).slice(0, 3);
   
-  // Ambil 4 antrian terakhir yang selesai
   const finishedParticipants = participants.filter(p => p.status === 'Finished').slice(-4).reverse();
   const nextInQueue = participants.find(p => p.status === 'Waiting');
   const totalToday = participants.length;
