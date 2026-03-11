@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Monitor, 
@@ -15,26 +15,13 @@ import {
   ArrowLeft,
   Video,
   User,
-  AlertTriangle,
-  Plus,
-  Trash2,
   FileVideo,
   Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { getQueueData, getSettings, saveSettings, clearQueueData } from '@/lib/queue-store';
+import { getQueueData, getSettings, saveSettings } from '@/lib/queue-store';
 import { Participant, DEFAULT_ZOOM_LINK, CounterClerk } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
@@ -56,9 +43,6 @@ export default function AdminDashboard() {
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
   const [videoUrl, setVideoUrl] = useState('');
   const [clerks, setClerks] = useState<CounterClerk[]>([]);
-  
-  // Dialog state
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const fetchQueue = () => {
     const data = getQueueData();
@@ -91,13 +75,6 @@ export default function AdminDashboard() {
     saveSettings({ dailyQuota, zoomLink, clerks, videoUrl });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
-  };
-
-  const handleResetQueueAction = () => {
-    clearQueueData();
-    setParticipants([]);
-    setShowResetConfirm(false);
-    toast({ title: "Antrian Direset", description: "Seluruh data antrian hari ini telah dihapus secara permanen." });
   };
 
   const downloadCSV = () => {
@@ -351,51 +328,16 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="pt-6 border-t space-y-6">
+                <div className="pt-6 border-t">
                   <Button onClick={handleSaveSettings} className="w-full h-14 bg-primary hover:bg-primary/90 rounded-xl text-lg font-bold flex gap-2 shadow-md">
                     <Save className="w-5 h-5" /> Simpan Pengaturan
                   </Button>
-
-                  <div className="pt-4">
-                    <Button 
-                      variant="destructive" 
-                      onClick={() => setShowResetConfirm(true)} 
-                      className="w-full h-12 rounded-xl text-sm font-bold flex gap-2 opacity-80 hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="w-4 h-4" /> Hapus Seluruh Antrian Hari Ini
-                    </Button>
-                    <p className="text-[10px] text-muted-foreground text-center mt-2 font-medium">Tindakan ini akan menghapus semua data pendaftar hari ini secara permanen.</p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
       </div>
-
-      {/* Reset Confirmation Dialog */}
-      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
-        <AlertDialogContent className="rounded-3xl max-w-md">
-          <AlertDialogHeader>
-            <div className="mx-auto bg-destructive/10 p-4 rounded-full w-fit mb-2">
-              <AlertTriangle className="w-10 h-10 text-destructive" />
-            </div>
-            <AlertDialogTitle className="text-2xl font-black text-center">Reset Seluruh Antrian?</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-base">
-              Apakah Anda yakin ingin menghapus <strong>seluruh data antrian hari ini</strong> secara permanen? Tindakan ini tidak dapat dibatalkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4">
-            <AlertDialogCancel className="rounded-xl h-12 font-bold flex-1">Batal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleResetQueueAction}
-              className="bg-destructive hover:bg-destructive/90 rounded-xl h-12 font-bold flex-1 border-none"
-            >
-              Ya, Hapus Semua
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <Toaster />
     </div>
