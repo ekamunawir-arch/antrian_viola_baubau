@@ -39,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { addParticipant, getQueueData, getSettings } from '@/lib/queue-store';
+import { addParticipant, getQueueData, getSettings, refreshQueueData } from '@/lib/queue-store';
 import { Participant, ServiceType } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
@@ -94,8 +94,15 @@ export default function ParticipantIntake() {
   useEffect(() => {
     setMounted(true);
     updateQueueInfo();
+    
+    // Sinkronisasi real-time setiap 15 detik untuk menangkap perubahan dari Viola Tracker
+    const syncInterval = setInterval(() => {
+      refreshQueueData();
+    }, 15000);
+
     window.addEventListener('viola_storage_update', updateQueueInfo);
     return () => {
+      clearInterval(syncInterval);
       window.removeEventListener('viola_storage_update', updateQueueInfo);
     };
   }, []);

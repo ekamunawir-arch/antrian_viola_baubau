@@ -66,6 +66,24 @@ if (typeof window !== 'undefined') {
   });
 }
 
+/**
+ * Memaksa sinkronisasi ulang data dari Firestore ke cache lokal.
+ */
+export const refreshQueueData = async () => {
+  try {
+    const today = getTodayDate();
+    const q = query(collection(db, 'participants'), where('date', '==', today));
+    const snapshot = await getDocs(q);
+    cachedParticipants = snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    } as Participant)).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    window.dispatchEvent(new Event('viola_storage_update'));
+  } catch (error) {
+    console.error("Gagal sinkronisasi data antrian:", error);
+  }
+};
+
 export const getQueueData = (): { participants: Participant[]; date: string } => {
   return { participants: cachedParticipants, date: getTodayDate() };
 };

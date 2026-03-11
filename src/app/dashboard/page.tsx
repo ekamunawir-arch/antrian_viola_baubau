@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getQueueData } from '@/lib/queue-store';
+import { getQueueData, refreshQueueData } from '@/lib/queue-store';
 import { Participant } from '@/lib/queue-types';
 import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User } from 'lucide-react';
 
@@ -20,14 +20,20 @@ export default function PublicDashboard() {
     setCurrentTime(new Date());
     fetchData();
     
-    const interval = setInterval(() => {
-      fetchData();
+    // Interval waktu jam
+    const clockInterval = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
+    // Sinkronisasi real-time setiap 15 detik untuk menangkap perubahan dari Viola Tracker
+    const syncInterval = setInterval(() => {
+      refreshQueueData();
+    }, 15000);
+
     window.addEventListener('viola_storage_update', fetchData);
     return () => {
-      clearInterval(interval);
+      clearInterval(clockInterval);
+      clearInterval(syncInterval);
       window.removeEventListener('viola_storage_update', fetchData);
     };
   }, []);
