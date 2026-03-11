@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -335,6 +336,8 @@ export default function AdminDashboard() {
                     <AlertDescription className="text-amber-700 text-xs">
                       Setelah memilih file lewat tombol <strong>Browse</strong>, Anda harus menyalin file video tersebut secara manual ke folder: <br/>
                       <code className="font-bold bg-white/50 px-1">public/video/</code> di dalam direktori project Anda.
+                      <br/><br/>
+                      <span className="text-rose-600 font-black italic">Catatan: Pastikan nama file tidak mengandung karakter aneh. Jika video tetap tidak muncul, coba beri nama file tanpa spasi.</span>
                     </AlertDescription>
                   </Alert>
                 </div>

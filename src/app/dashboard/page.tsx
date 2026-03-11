@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -98,7 +99,7 @@ export default function PublicDashboard() {
                 <video 
                   key={settings.videoUrl}
                   className="w-full h-full object-cover" 
-                  src={settings.videoUrl} 
+                  src={encodeURI(settings.videoUrl)} 
                   autoPlay 
                   loop 
                   muted 
@@ -113,7 +114,16 @@ export default function PublicDashboard() {
                     <>
                       <AlertCircle className="w-24 h-24 mb-4 text-rose-500/50" />
                       <p className="text-lg font-black uppercase text-rose-500/50">File Video Tidak Ditemukan</p>
-                      <p className="text-xs mt-2 text-white/20">Pastikan file ada di folder: <code className="bg-white/5 px-2 py-1 rounded">public{settings?.videoUrl}</code></p>
+                      <div className="text-xs mt-4 text-white/40 space-y-2 max-w-md">
+                        <p>Aplikasi mencoba memanggil:</p>
+                        <code className="bg-white/5 px-2 py-1 rounded block break-all text-rose-300">
+                          {settings?.videoUrl}
+                        </code>
+                        <p className="mt-4 pt-4 border-t border-white/5">
+                          Pastikan file ada di folder: <br/>
+                          <span className="font-bold text-white/60 underline">public{settings?.videoUrl}</span>
+                        </p>
+                      </div>
                     </>
                   ) : (
                     <>
