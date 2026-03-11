@@ -8,7 +8,6 @@ import {
   Download, 
   LogOut, 
   Clock, 
-  ChevronRight,
   LayoutDashboard,
   ShieldCheck,
   Settings,
@@ -18,9 +17,9 @@ import {
   User,
   FileVideo,
   Play,
-  Search,
   FolderOpen,
-  Info
+  Info,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -86,7 +85,7 @@ export default function AdminDashboard() {
       setVideoUrl(`/video/${file.name}`);
       toast({ 
         title: "File Dipilih", 
-        description: `Path disetel ke /video/${file.name}. Jangan lupa pindahkan file asli ke folder public/video/.` 
+        description: `Nama file tercatat: ${file.name}. Silakan ikuti instruksi upload di bawah.` 
       });
     }
   };
@@ -298,7 +297,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-4 border-t pt-6">
-                  <Label htmlFor="videoUrl" className="text-sm font-black text-primary uppercase tracking-wider">Path Video Dashboard</Label>
+                  <Label htmlFor="videoUrl" className="text-sm font-black text-primary uppercase tracking-wider">Pilih Video Dashboard</Label>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -308,9 +307,9 @@ export default function AdminDashboard() {
                         id="videoUrl"
                         type="text" 
                         value={videoUrl} 
-                        onChange={(e) => setVideoUrl(e.target.value)}
+                        readOnly
                         placeholder="/video/nama-file.mp4"
-                        className="h-12 pl-12 rounded-xl text-sm font-medium bg-slate-50"
+                        className="h-12 pl-12 rounded-xl text-sm font-medium bg-slate-50 cursor-not-allowed"
                       />
                     </div>
                     <input 
@@ -331,13 +330,23 @@ export default function AdminDashboard() {
                   </div>
 
                   <Alert className="bg-amber-50 border-amber-200">
-                    <Info className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="text-amber-800 font-bold">Langkah Wajib!</AlertTitle>
-                    <AlertDescription className="text-amber-700 text-xs">
-                      Setelah memilih file lewat tombol <strong>Browse</strong>, Anda harus menyalin file video tersebut secara manual ke folder: <br/>
-                      <code className="font-bold bg-white/50 px-1">public/video/</code> di dalam direktori project Anda.
-                      <br/><br/>
-                      <span className="text-rose-600 font-black italic">Catatan: Pastikan nama file tidak mengandung karakter aneh. Jika video tetap tidak muncul, coba beri nama file tanpa spasi.</span>
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    <AlertTitle className="text-amber-800 font-black">PENTING: Langkah Wajib Upload!</AlertTitle>
+                    <AlertDescription className="text-amber-700 text-xs mt-2 space-y-3">
+                      <p>Tombol <strong>Browse</strong> di atas hanya mencatat "Nama File" Anda. browser tidak dapat mengunggah file secara otomatis dari komputer Anda karena alasan keamanan.</p>
+                      
+                      <div className="space-y-1">
+                        <p className="font-bold underline">Anda harus melakukan hal berikut secara manual:</p>
+                        <ol className="list-decimal ml-4 space-y-1">
+                          <li>Buka <strong>File Explorer</strong> di panel kiri Editor ini.</li>
+                          <li>Cari folder bernama <strong>public</strong>.</li>
+                          <li>Klik kanan pada folder <strong>public</strong>, pilih <strong>New Folder</strong> dan beri nama <code className="bg-white/50 px-1 font-bold">video</code> (jika belum ada).</li>
+                          <li><strong>Upload/Tarik (Drag & Drop)</strong> file video dari laptop Anda ke dalam folder <code className="bg-white/50 px-1 font-bold">public/video/</code> tersebut.</li>
+                          <li>Pastikan nama file di folder tersebut <strong>SAMA PERSIS</strong> dengan nama yang dipilih melalui tombol Browse di atas.</li>
+                        </ol>
+                      </div>
+                      
+                      <p className="text-rose-600 font-black italic">Catatan: Disarankan nama file tanpa spasi untuk menghindari error pembacaan URL.</p>
                     </AlertDescription>
                   </Alert>
                 </div>
