@@ -28,7 +28,8 @@ let cachedParticipants: Participant[] = [];
 let cachedSettings: SystemSettings = { 
   dailyQuota: DAILY_QUOTA, 
   zoomLink: DEFAULT_ZOOM_LINK, 
-  clerks: DEFAULT_CLERKS 
+  clerks: DEFAULT_CLERKS,
+  videoUrl: ''
 };
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -54,6 +55,7 @@ if (typeof window !== 'undefined') {
         dailyQuota: DAILY_QUOTA, 
         zoomLink: DEFAULT_ZOOM_LINK, 
         clerks: DEFAULT_CLERKS,
+        videoUrl: '',
         lastWhatsAppSentAt: Date.now()
       });
     }

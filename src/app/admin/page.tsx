@@ -6,8 +6,6 @@ import {
   Monitor, 
   Download, 
   LogOut, 
-  Play, 
-  CheckCircle, 
   Clock, 
   ChevronRight,
   LayoutDashboard,
@@ -20,19 +18,11 @@ import {
   AlertTriangle,
   Plus,
   Trash2,
-  Users,
-  Timer
+  FileVideo,
+  Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { 
   AlertDialog,
@@ -44,14 +34,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getQueueData, updateParticipantStatus, getSettings, saveSettings, clearQueueData } from '@/lib/queue-store';
+import { getQueueData, getSettings, saveSettings, clearQueueData } from '@/lib/queue-store';
 import { Participant, DEFAULT_ZOOM_LINK, CounterClerk } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -64,19 +52,11 @@ export default function AdminDashboard() {
   // Settings state
   const [dailyQuota, setDailyQuota] = useState(20);
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
+  const [videoUrl, setVideoUrl] = useState('');
   const [clerks, setClerks] = useState<CounterClerk[]>([]);
-  
-  // Dashboard state
-  const [activeClerkId, setActiveClerkId] = useState<string>('');
-  const [isCalling, setIsCalling] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
   
   // Dialog state
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  
-  // Audio Queue refs
-  const audioQueue = useRef<string[]>([]);
-  const isPlayingAudio = useRef(false);
 
   const fetchQueue = () => {
     const data = getQueueData();
@@ -84,12 +64,8 @@ export default function AdminDashboard() {
     setParticipants(data.participants);
     setDailyQuota(settings.dailyQuota);
     setZoomLink(settings.zoomLink);
+    setVideoUrl(settings.videoUrl || '');
     setClerks(settings.clerks);
-    
-    if (!activeClerkId && settings.clerks.length > 0) {
-      setActiveClerkId(settings.clerks[0].id);
-    }
-    
     setLastSync(new Date());
   };
 
@@ -97,31 +73,7 @@ export default function AdminDashboard() {
     fetchQueue();
     window.addEventListener('viola_storage_update', fetchQueue);
     return () => window.removeEventListener('viola_storage_update', fetchQueue);
-  }, [activeClerkId]);
-
-  const playSequentially = async (dataUri: string) => {
-    audioQueue.current.push(dataUri);
-    
-    if (isPlayingAudio.current) return;
-
-    isPlayingAudio.current = true;
-    while (audioQueue.current.length > 0) {
-      const nextUri = audioQueue.current.shift();
-      if (nextUri) {
-        try {
-          const audio = new Audio(nextUri);
-          await new Promise((resolve) => {
-            audio.onended = resolve;
-            audio.onerror = resolve;
-            audio.play().catch(resolve);
-          });
-        } catch (e) {
-          console.error("Gagal memutar audio:", e);
-        }
-      }
-    }
-    isPlayingAudio.current = false;
-  };
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,70 +83,6 @@ export default function AdminDashboard() {
     } else {
       toast({ variant: "destructive", title: "Login Gagal", description: "Password salah." });
     }
-  };
-
-  const handleCall = async (p: Participant) => {
-    if (isCalling) return;
-
-    const clerk = clerks.find(c => c.id === activeClerkId);
-    if (!clerk) {
-      toast({ variant: "destructive", title: "Petugas Belum Dipilih", description: "Silakan pilih petugas loket terlebih dahulu." });
-      return;
-    }
-
-    // Aktifkan cooldown 10 detik
-    setIsCalling(true);
-    setCooldown(10);
-    
-    const timer = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    setTimeout(() => {
-      setIsCalling(false);
-    }, 10000);
-
-    updateParticipantStatus(p.id, 'Being Served', clerk.name);
-    
-    try {
-      const result = await adminQueueCallAnnouncement({
-        queueNumber: p.queueNumber,
-        participantName: p.fullName
-      });
-
-      if (result.error === 'QUOTA_EXHAUSTED') {
-        toast({ 
-          variant: "destructive", 
-          title: "Batas Pemanggilan Tercapai", 
-          description: "Sistem suara mencapai batas kuota sementara. Mohon tunggu sekitar 1 menit sebelum memanggil lagi." 
-        });
-        return;
-      }
-      
-      if (result.audioDataUri) {
-        playSequentially(result.audioDataUri);
-        toast({ title: "Memanggil Antrian", description: `Memanggil ${p.queueNumber} - ${p.fullName} oleh ${clerk.name}` });
-      }
-      
-    } catch (error: any) {
-      console.error("Gagal memanggil:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Gagal Memanggil", 
-        description: "Terjadi kesalahan pada sistem suara." 
-      });
-    }
-  };
-
-  const handleFinish = (id: string) => {
-    updateParticipantStatus(id, 'Finished');
-    toast({ title: "Layanan Selesai", description: "Peserta telah dipindahkan ke daftar selesai." });
   };
 
   const handleAddClerk = () => {
@@ -218,7 +106,7 @@ export default function AdminDashboard() {
   };
 
   const handleSaveSettings = () => {
-    saveSettings({ dailyQuota, zoomLink, clerks });
+    saveSettings({ dailyQuota, zoomLink, clerks, videoUrl });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
   };
@@ -241,7 +129,7 @@ export default function AdminDashboard() {
       p.serviceType,
       p.queueNumber,
       p.status,
-      p.staffName || "-"
+      p.servedBy || p.staffName || "-"
     ]);
     
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -256,7 +144,7 @@ export default function AdminDashboard() {
     document.body.removeChild(link);
   };
 
-  const beingServedList = participants.filter(p => p.status === 'Being Served');
+  const beingServedList = participants.filter(p => p.status === 'Being Served' || p.status === 'Called' || p.status === 'called');
 
   if (!isLoggedIn) {
     return (
@@ -324,125 +212,39 @@ export default function AdminDashboard() {
 
         {activeTab === 'dashboard' ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-            <Card className="md:col-span-2 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 border-b mb-4">
-                <div className="space-y-1">
-                  <CardTitle className="font-headline text-lg">Daftar Antrian Hari Ini</CardTitle>
-                  <CardDescription>Kelola panggilan dan status layanan peserta.</CardDescription>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loket Aktif Anda</p>
-                    <Select value={activeClerkId} onValueChange={setActiveClerkId}>
-                      <SelectTrigger className="h-9 w-[180px] bg-muted/50 font-bold border-none rounded-lg mt-1">
-                        <SelectValue placeholder="Pilih Petugas" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clerks.map(c => (
-                          <SelectItem key={c.id} value={c.id} className="font-bold">{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Badge variant="outline" className="rounded-full px-4 h-8">{participants.length} Antrian</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-xl border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead className="w-20">No</TableHead>
-                        <TableHead>Peserta</TableHead>
-                        <TableHead>Layanan</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {participants.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Belum ada antrian untuk hari ini.</TableCell>
-                        </TableRow>
-                      ) : (
-                        participants.map((p) => (
-                          <TableRow key={p.id}>
-                            <TableCell className="font-black text-primary">{p.queueNumber}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-semibold">{p.fullName}</span>
-                                <span className="text-xs text-muted-foreground">{p.whatsapp}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className="text-[10px] font-bold uppercase">{p.serviceType}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Badge className={
-                                  p.status === 'Waiting' ? 'bg-yellow-500' : 
-                                  p.status === 'Being Served' ? 'bg-blue-600' : 'bg-green-600'
-                                }>
-                                  {p.status === 'Waiting' ? 'Menunggu' : 
-                                   p.status === 'Being Served' ? 'Melayani' : 'Selesai'}
-                                </Badge>
-                                {p.staffName && (
-                                  <span className="text-[10px] text-muted-foreground italic">Oleh: {p.staffName}</span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
-                                {p.status === 'Waiting' && (
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => handleCall(p)} 
-                                    disabled={isCalling}
-                                    className="bg-blue-600 hover:bg-blue-700 h-8 w-24"
-                                  >
-                                    {isCalling ? (
-                                      <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {cooldown}s</span>
-                                    ) : (
-                                      <span className="flex items-center"><Play className="w-3 h-3 mr-1" /> Panggil</span>
-                                    )}
-                                  </Button>
-                                )}
-                                {p.status === 'Being Served' && (
-                                  <>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline" 
-                                      onClick={() => handleCall(p)} 
-                                      disabled={isCalling}
-                                      className="h-8 w-24"
-                                    >
-                                      {isCalling ? (
-                                        <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {cooldown}s</span>
-                                      ) : (
-                                        <span className="flex items-center"><Play className="w-3 h-3 mr-1" /> Ulangi</span>
-                                      )}
-                                    </Button>
-                                    <Button size="sm" onClick={() => handleFinish(p.id)} className="bg-green-600 hover:bg-green-700 h-8">
-                                      <CheckCircle className="w-3 h-3 mr-1" /> Selesai
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
+            {/* Panel Ringkasan Monitoring - Pengganti Tabel Antrian */}
+            <Card className="md:col-span-2 shadow-sm border-none bg-gradient-to-br from-white to-slate-50">
+               <CardHeader className="pb-4">
+                 <CardTitle className="text-xl font-black text-primary uppercase tracking-tight">Status Monitoring</CardTitle>
+                 <CardDescription>Antrian dikelola sepenuhnya melalui aplikasi <strong>Viola Tracker</strong>.</CardDescription>
+               </CardHeader>
+               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="bg-blue-100 p-4 rounded-2xl text-blue-600">
+                      <Play className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground">Sedang Dilayani</p>
+                      <p className="text-4xl font-black text-blue-600">{beingServedList.length}</p>
+                    </div>
+                 </div>
+                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="bg-emerald-100 p-4 rounded-2xl text-emerald-600">
+                      <Clock className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground">Menunggu Panggilan</p>
+                      <p className="text-4xl font-black text-emerald-600">{participants.filter(p => p.status === 'Waiting').length}</p>
+                    </div>
+                 </div>
+               </CardContent>
             </Card>
 
             <div className="space-y-6">
               <Card className="shadow-sm border-l-4 border-l-primary overflow-hidden">
                 <CardHeader className="bg-primary/5 p-4 border-b">
                   <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                    <Play className="w-4 h-4" /> Sedang Dilayani
+                    <Play className="w-4 h-4" /> Aktif Dilayani
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 space-y-3">
@@ -459,7 +261,7 @@ export default function AdminDashboard() {
                               {p.serviceType}
                             </Badge>
                             <span className="text-[9px] font-bold text-sky-600 flex items-center gap-0.5">
-                              {p.staffName}
+                              {p.servedBy || p.staffName}
                             </span>
                           </div>
                         </div>
@@ -468,7 +270,7 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="text-center py-10 opacity-30">
                       <User className="w-10 h-10 mx-auto mb-2" />
-                      <p className="text-[10px] font-bold uppercase tracking-widest">Tidak ada layanan aktif</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Tidak ada layanan aktif</p>
                     </div>
                   )}
                 </CardContent>
@@ -545,6 +347,25 @@ export default function AdminDashboard() {
                         className="h-12 pl-12 rounded-xl text-sm font-medium"
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* Video URL Setting */}
+                <div className="space-y-2 border-t pt-6">
+                  <Label htmlFor="videoUrl" className="text-sm font-black text-primary uppercase tracking-wider">Path Video Dashboard</Label>
+                  <p className="text-xs text-muted-foreground">Masukkan path file video lokal (Contoh: /video/promo.mp4)</p>
+                  <div className="relative mt-2">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <FileVideo className="w-4 h-4" />
+                    </div>
+                    <Input 
+                      id="videoUrl"
+                      type="text" 
+                      value={videoUrl} 
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="/video/nama-file.mp4"
+                      className="h-12 pl-12 rounded-xl text-sm font-medium"
+                    />
                   </div>
                 </div>
 

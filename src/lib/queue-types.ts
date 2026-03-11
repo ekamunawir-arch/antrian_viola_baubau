@@ -17,6 +17,7 @@ export interface Participant {
   whatsappSentAt?: string;
   calledAt?: string; 
   finishedAt?: string; 
+  finishAt?: string;
 }
 
 export interface CounterClerk {
@@ -28,6 +29,7 @@ export interface SystemSettings {
   dailyQuota: number;
   zoomLink: string;
   clerks: CounterClerk[];
+  videoUrl?: string;
 }
 
 export const DEFAULT_ZOOM_LINK = "https://zoom.us/j/viola-virtual-office";
