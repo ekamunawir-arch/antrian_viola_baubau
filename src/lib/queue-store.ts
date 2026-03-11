@@ -1,4 +1,3 @@
-
 import { db } from './firebase';
 import { 
   collection, 
@@ -25,7 +24,6 @@ import {
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// State lokal untuk sinkronisasi cepat di UI
 let cachedParticipants: Participant[] = [];
 let cachedSettings: SystemSettings = { 
   dailyQuota: DAILY_QUOTA, 
@@ -35,11 +33,9 @@ let cachedSettings: SystemSettings = {
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-// Inisialisasi Listeners Real-time dari Firestore
 if (typeof window !== 'undefined') {
   const today = getTodayDate();
   
-  // Listen data peserta hari ini
   const q = query(collection(db, 'participants'), where('date', '==', today));
   onSnapshot(q, (snapshot) => {
     cachedParticipants = snapshot.docs.map(doc => ({ 
@@ -50,12 +46,10 @@ if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('viola_storage_update'));
   });
 
-  // Listen pengaturan sistem (kuota, zoom, loket)
   onSnapshot(doc(db, 'settings', 'config'), (snapshot) => {
     if (snapshot.exists()) {
       cachedSettings = snapshot.data() as SystemSettings;
     } else {
-      // Inisialisasi default jika dokumen belum ada di Firestore
       setDoc(doc(db, 'settings', 'config'), { 
         dailyQuota: DAILY_QUOTA, 
         zoomLink: DEFAULT_ZOOM_LINK, 
@@ -67,9 +61,6 @@ if (typeof window !== 'undefined') {
   });
 }
 
-/**
- * Memaksa sinkronisasi ulang data dari Firestore ke cache lokal.
- */
 export const refreshQueueData = async () => {
   try {
     const today = getTodayDate();
@@ -113,7 +104,6 @@ export const clearQueueData = async () => {
 export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Promise<{ success: boolean; error?: string; participant?: Participant }> => {
   const today = getTodayDate();
   
-  // Ambil settings terbaru
   let settings = cachedSettings;
   try {
     const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
@@ -152,11 +142,9 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
   };
 
   try {
-    // 1. Simpan peserta ke Firestore (Instan)
     const docRef = await addDoc(collection(db, 'participants'), newParticipantData);
     const newParticipant = { id: docRef.id, ...newParticipantData };
 
-    // 2. Jadwalkan waktu pengiriman WhatsApp yang unik (Distributed Queue)
     const scheduleWhatsApp = async () => {
       const settingsRef = doc(db, 'settings', 'config');
       
@@ -170,7 +158,6 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
             lastSentAt = configDoc.data().lastWhatsAppSentAt;
           }
 
-          // Aturan: Jeda minimal 45 detik antar pesan dari SIAPA PUN di sistem
           const scheduledFor = Math.max(now + 10000, lastSentAt + 45000);
           
           transaction.update(settingsRef, { lastWhatsAppSentAt: scheduledFor });
@@ -195,7 +182,6 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
 
         const waResult = await waResponse.json();
         if (waResult.success) {
-          // Catat waktu pengiriman nyata ke Firestore
           const pRef = doc(db, 'participants', newParticipant.id);
           await updateDoc(pRef, { whatsappSentAt: new Date().toISOString() });
           console.log(`WhatsApp terkirim untuk ${newParticipant.queueNumber} sesuai jadwal.`);
@@ -207,7 +193,6 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
       }
     };
 
-    // Jalankan penjadwalan di latar belakang
     scheduleWhatsApp();
 
     return { success: true, participant: newParticipant };
@@ -224,11 +209,11 @@ export const updateParticipantStatus = async (id: string, status: Participant['s
   const updates: any = { status };
   if (status === 'Being Served' || status === 'Called' || status === 'called') {
     updates.serveStartTime = now;
-    updates.calledAt = now; // Sinkronisasi field untuk integrasi tracker
+    updates.calledAt = now; 
     updates.staffName = staffName || 'Admin VIOLA';
   } else if (status === 'Finished') {
     updates.serveEndTime = now;
-    updates.finishAt = now; // Sinkronisasi field untuk integrasi tracker
+    updates.finishedAt = now; 
   }
 
   await updateDoc(docRef, updates);
