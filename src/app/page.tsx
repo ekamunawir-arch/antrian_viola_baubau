@@ -374,7 +374,7 @@ export default function ParticipantIntake() {
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <AlertDialogContent className="rounded-[2.5rem] max-w-[400px] p-8 border-none shadow-2xl overflow-hidden">
+        <AlertDialogContent className="rounded-[2.5rem] max-w-[420px] p-8 border-none shadow-2xl overflow-hidden">
           <AlertDialogHeader className="space-y-4">
             <AlertDialogTitle className="text-center text-3xl font-black text-[#005a78] tracking-tight">
               Konfirmasi Nomor
@@ -383,11 +383,11 @@ export default function ParticipantIntake() {
               <div className="space-y-6">
                 <p className="text-slate-500 font-medium">Apakah nomor WhatsApp Anda sudah benar?</p>
                 
-                <div className="p-6 bg-primary/5 rounded-[2rem] border-2 border-primary/20 flex items-center justify-center gap-4 shadow-inner group transition-all hover:bg-primary/10">
-                  <div className="bg-primary/10 p-2 rounded-xl group-hover:scale-110 transition-transform">
+                <div className="py-5 px-4 bg-primary/5 rounded-[2rem] border-2 border-primary/20 flex items-center justify-center gap-3 shadow-inner group transition-all hover:bg-primary/10">
+                  <div className="bg-primary/10 p-2 rounded-xl group-hover:scale-110 transition-transform shrink-0">
                     <Phone className="w-6 h-6 text-primary" />
                   </div>
-                  <span className="text-3xl font-black tracking-widest text-primary tabular-nums">
+                  <span className="text-xl sm:text-2xl md:text-3xl font-black text-primary tabular-nums break-all">
                     {pendingData?.whatsapp}
                   </span>
                 </div>
