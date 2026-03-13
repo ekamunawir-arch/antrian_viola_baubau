@@ -19,7 +19,10 @@ import {
   DAILY_QUOTA, 
   SystemSettings, 
   DEFAULT_ZOOM_LINK, 
-  DEFAULT_CLERKS 
+  DEFAULT_CLERKS,
+  DEFAULT_OPERATING_DAYS,
+  DEFAULT_START_TIME,
+  DEFAULT_END_TIME
 } from './queue-types';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -29,7 +32,10 @@ let cachedSettings: SystemSettings = {
   dailyQuota: DAILY_QUOTA, 
   zoomLink: DEFAULT_ZOOM_LINK, 
   clerks: DEFAULT_CLERKS,
-  videoUrl: ''
+  videoUrl: '',
+  operatingDays: DEFAULT_OPERATING_DAYS,
+  startTime: DEFAULT_START_TIME,
+  endTime: DEFAULT_END_TIME
 };
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -49,14 +55,20 @@ if (typeof window !== 'undefined') {
 
   onSnapshot(doc(db, 'settings', 'config'), (snapshot) => {
     if (snapshot.exists()) {
-      cachedSettings = snapshot.data() as SystemSettings;
+      cachedSettings = {
+        ...cachedSettings,
+        ...snapshot.data()
+      } as SystemSettings;
     } else {
       setDoc(doc(db, 'settings', 'config'), { 
         dailyQuota: DAILY_QUOTA, 
         zoomLink: DEFAULT_ZOOM_LINK, 
         clerks: DEFAULT_CLERKS,
         videoUrl: '',
-        lastWhatsAppSentAt: Date.now()
+        lastWhatsAppSentAt: Date.now(),
+        operatingDays: DEFAULT_OPERATING_DAYS,
+        startTime: DEFAULT_START_TIME,
+        endTime: DEFAULT_END_TIME
       });
     }
     window.dispatchEvent(new Event('viola_storage_update'));

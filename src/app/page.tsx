@@ -16,7 +16,8 @@ import {
   Ticket,
   MessageSquare,
   Info,
-  Phone
+  Phone,
+  CalendarX
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,7 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { addParticipant, getQueueData, getSettings, refreshQueueData } from '@/lib/queue-store';
-import { Participant, ServiceType } from '@/lib/queue-types';
+import { Participant, ServiceType, SystemSettings } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Badge } from '@/components/ui/badge';
@@ -59,8 +60,9 @@ export default function ParticipantIntake() {
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [finalQueue, setFinalQueue] = useState<Participant | null>(null);
   const [isFull, setIsFull] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [dailyQuota, setDailyQuota] = useState(20);
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [showConfirm, setShowConfirm] = useState(false);
@@ -75,13 +77,30 @@ export default function ParticipantIntake() {
     lastFinished: null as Participant | null
   });
 
+  const checkOperatingTime = (currentSettings: SystemSettings) => {
+    const now = new Date();
+    const day = now.getDay();
+    const time = now.getHours() * 100 + now.getMinutes();
+    
+    const [startH, startM] = (currentSettings.startTime || "08:00").split(':').map(Number);
+    const [endH, endM] = (currentSettings.endTime || "15:00").split(':').map(Number);
+    
+    const startTimeVal = startH * 100 + startM;
+    const endTimeVal = endH * 100 + endM;
+    
+    const isWorkingDay = currentSettings.operatingDays?.includes(day) ?? true;
+    const isWorkingTime = time >= startTimeVal && time <= endTimeVal;
+    
+    setIsClosed(!(isWorkingDay && isWorkingTime));
+  };
+
   const updateQueueInfo = () => {
     const { participants } = getQueueData();
-    const settings = getSettings();
-    setDailyQuota(settings.dailyQuota);
-    setIsFull(participants.length >= settings.dailyQuota);
+    const currentSettings = getSettings();
+    setSettings(currentSettings);
+    setIsFull(participants.length >= (currentSettings.dailyQuota || 20));
+    checkOperatingTime(currentSettings);
     
-    // Filter untuk menampilkan yang sedang dilayani atau dipanggil (Called)
     const activeParticipants = participants.filter(p => 
       p.status === 'Being Served' || 
       p.status === 'Called' || 
@@ -104,6 +123,7 @@ export default function ParticipantIntake() {
     
     const syncInterval = setInterval(() => {
       refreshQueueData();
+      if (settings) checkOperatingTime(settings);
     }, 15000);
 
     window.addEventListener('viola_storage_update', updateQueueInfo);
@@ -111,7 +131,7 @@ export default function ParticipantIntake() {
       clearInterval(syncInterval);
       window.removeEventListener('viola_storage_update', updateQueueInfo);
     };
-  }, []);
+  }, [settings]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -151,7 +171,13 @@ export default function ParticipantIntake() {
     setPendingData(null);
   };
 
+  const dailyQuota = settings?.dailyQuota || 20;
   const remainingQuota = Math.max(0, dailyQuota - queueInfo.total);
+
+  const getDayName = (dayIndex: number) => {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    return days[dayIndex];
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
@@ -198,7 +224,28 @@ export default function ParticipantIntake() {
                 </div>
               </CardHeader>
               <CardContent className="px-8 pb-10">
-                {isFull ? (
+                {isClosed ? (
+                  <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-8 text-center space-y-6">
+                    <CalendarX className="w-16 h-16 text-slate-400 mx-auto" />
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-black text-slate-700">Layanan Sedang Tutup</h3>
+                      <p className="text-slate-500 font-medium">Mohon maaf, saat ini di luar jam operasional pendaftaran.</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 inline-block text-left shadow-sm">
+                       <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-3 border-b pb-2">Jadwal Operasional VIOLA:</p>
+                       <div className="space-y-2">
+                          <p className="text-sm font-bold text-slate-700 flex justify-between gap-8">
+                             <span>Hari:</span> 
+                             <span className="text-primary">{(settings?.operatingDays || []).map(d => getDayName(d).substring(0, 3)).join(', ')}</span>
+                          </p>
+                          <p className="text-sm font-bold text-slate-700 flex justify-between gap-8">
+                             <span>Jam:</span> 
+                             <span className="text-primary">{settings?.startTime} - {settings?.endTime} WIB</span>
+                          </p>
+                       </div>
+                    </div>
+                  </div>
+                ) : isFull ? (
                   <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-8 text-center space-y-4">
                     <AlertCircle className="w-16 h-16 text-rose-500 mx-auto" />
                     <h3 className="text-2xl font-black text-rose-700">Kuota Hari Ini Penuh</h3>

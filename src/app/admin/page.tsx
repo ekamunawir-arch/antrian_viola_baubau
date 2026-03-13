@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -19,18 +18,30 @@ import {
   Play,
   FolderOpen,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  CalendarDays
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, getSettings, saveSettings } from '@/lib/queue-store';
-import { Participant, DEFAULT_ZOOM_LINK, CounterClerk } from '@/lib/queue-types';
+import { Participant, DEFAULT_ZOOM_LINK, CounterClerk, DEFAULT_OPERATING_DAYS, DEFAULT_START_TIME, DEFAULT_END_TIME } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const DAYS = [
+  { label: 'Min', value: 0 },
+  { label: 'Sen', value: 1 },
+  { label: 'Sel', value: 2 },
+  { label: 'Rab', value: 3 },
+  { label: 'Kam', value: 4 },
+  { label: 'Jum', value: 5 },
+  { label: 'Sab', value: 6 },
+];
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -44,6 +55,9 @@ export default function AdminDashboard() {
   const [dailyQuota, setDailyQuota] = useState(20);
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
   const [videoUrl, setVideoUrl] = useState('');
+  const [operatingDays, setOperatingDays] = useState<number[]>(DEFAULT_OPERATING_DAYS);
+  const [startTime, setStartTime] = useState(DEFAULT_START_TIME);
+  const [endTime, setEndTime] = useState(DEFAULT_END_TIME);
   const [clerks, setClerks] = useState<CounterClerk[]>([]);
 
   const fetchQueue = () => {
@@ -54,6 +68,9 @@ export default function AdminDashboard() {
     setZoomLink(settings.zoomLink);
     setVideoUrl(settings.videoUrl || '');
     setClerks(settings.clerks);
+    setOperatingDays(settings.operatingDays || DEFAULT_OPERATING_DAYS);
+    setStartTime(settings.startTime || DEFAULT_START_TIME);
+    setEndTime(settings.endTime || DEFAULT_END_TIME);
     setLastSync(new Date());
   };
 
@@ -74,9 +91,23 @@ export default function AdminDashboard() {
   };
 
   const handleSaveSettings = () => {
-    saveSettings({ dailyQuota, zoomLink, clerks, videoUrl });
+    saveSettings({ 
+      dailyQuota, 
+      zoomLink, 
+      clerks, 
+      videoUrl, 
+      operatingDays, 
+      startTime, 
+      endTime 
+    });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
+  };
+
+  const toggleDay = (day: number) => {
+    setOperatingDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
   };
 
   const handleFileBrowse = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,6 +323,55 @@ export default function AdminDashboard() {
                         placeholder="https://zoom.us/..."
                         className="h-12 pl-12 rounded-xl text-sm font-medium"
                       />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6 border-t pt-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CalendarDays className="w-5 h-5 text-primary" />
+                    <Label className="text-sm font-black text-primary uppercase tracking-wider">Waktu Operasional Pendaftaran</Label>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Pilih Hari Aktif:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {DAYS.map((day) => (
+                          <div 
+                            key={day.value}
+                            onClick={() => toggleDay(day.value)}
+                            className={`px-3 py-2 rounded-lg cursor-pointer transition-all border-2 text-xs font-bold ${
+                              operatingDays.includes(day.value)
+                                ? 'bg-primary border-primary text-white shadow-md'
+                                : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-primary/30'
+                            }`}
+                          >
+                            {day.label}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Jam Mulai:</p>
+                        <Input 
+                          type="time" 
+                          value={startTime} 
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="h-12 rounded-xl text-center font-bold"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Jam Selesai:</p>
+                        <Input 
+                          type="time" 
+                          value={endTime} 
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="h-12 rounded-xl text-center font-bold"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
