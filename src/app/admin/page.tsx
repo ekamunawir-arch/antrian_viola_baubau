@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Monitor, 
@@ -15,13 +15,16 @@ import {
   Video,
   User,
   Play,
-  CalendarDays
+  CalendarDays,
+  CalendarOff,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, getSettings, saveSettings } from '@/lib/queue-store';
-import { Participant, DEFAULT_ZOOM_LINK, DEFAULT_OPERATING_DAYS, DEFAULT_START_TIME, DEFAULT_END_TIME } from '@/lib/queue-types';
+import { Participant, DEFAULT_ZOOM_LINK, DEFAULT_OPERATING_DAYS, DEFAULT_START_TIME, DEFAULT_END_TIME, DEFAULT_SERVICE_START_TIME } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Input } from '@/components/ui/input';
@@ -39,6 +42,9 @@ export default function AdminDashboard() {
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
   const [startTime, setStartTime] = useState(DEFAULT_START_TIME);
   const [endTime, setEndTime] = useState(DEFAULT_END_TIME);
+  const [serviceStartTime, setServiceStartTime] = useState(DEFAULT_SERVICE_START_TIME);
+  const [holidays, setHolidays] = useState<string[]>([]);
+  const [newHoliday, setNewHoliday] = useState('');
 
   const fetchQueue = () => {
     const data = getQueueData();
@@ -48,6 +54,8 @@ export default function AdminDashboard() {
     setZoomLink(settings.zoomLink);
     setStartTime(settings.startTime || DEFAULT_START_TIME);
     setEndTime(settings.endTime || DEFAULT_END_TIME);
+    setServiceStartTime(settings.serviceStartTime || DEFAULT_SERVICE_START_TIME);
+    setHolidays(settings.holidays || []);
     setLastSync(new Date());
   };
 
@@ -72,12 +80,28 @@ export default function AdminDashboard() {
       dailyQuota, 
       zoomLink, 
       clerks: getSettings().clerks, 
-      operatingDays: DEFAULT_OPERATING_DAYS, // Reset to Mon-Fri default
+      operatingDays: DEFAULT_OPERATING_DAYS,
       startTime, 
-      endTime 
+      endTime,
+      serviceStartTime,
+      holidays
     });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
+  };
+
+  const addHoliday = () => {
+    if (!newHoliday) return;
+    if (holidays.includes(newHoliday)) {
+      toast({ variant: "destructive", title: "Gagal", description: "Tanggal sudah ada dalam daftar libur." });
+      return;
+    }
+    setHolidays([...holidays, newHoliday].sort());
+    setNewHoliday('');
+  };
+
+  const removeHoliday = (date: string) => {
+    setHolidays(holidays.filter(h => h !== date));
   };
 
   const downloadCSV = () => {
@@ -238,7 +262,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto animate-in slide-in-from-bottom-4 duration-300">
+          <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-300 pb-20">
             <Card className="shadow-lg border-t-4 border-t-primary">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -289,38 +313,79 @@ export default function AdminDashboard() {
                 <div className="space-y-6 border-t pt-6">
                   <div className="flex items-center gap-2 mb-2">
                     <CalendarDays className="w-5 h-5 text-primary" />
-                    <Label className="text-sm font-black text-primary uppercase tracking-wider">Jam Operasional Pendaftaran</Label>
+                    <Label className="text-sm font-black text-primary uppercase tracking-wider">Waktu Operasional Pendaftaran & Layanan</Label>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-primary/20 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-xs font-black uppercase text-primary tracking-[0.2em] mb-1">Hari Kerja</p>
-                        <p className="text-lg font-bold text-slate-700">Senin - Jumat</p>
-                        <p className="text-[10px] text-muted-foreground italic">(Kecuali Hari Libur Nasional)</p>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Mulai Pendaftaran:</p>
+                      <Input 
+                        type="time" 
+                        value={startTime} 
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="h-12 rounded-xl text-center font-bold"
+                      />
+                      <p className="text-[10px] text-slate-400 italic">Peserta bisa ambil nomor</p>
                     </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Layanan Dimulai:</p>
+                      <Input 
+                        type="time" 
+                        value={serviceStartTime} 
+                        onChange={(e) => setServiceStartTime(e.target.value)}
+                        className="h-12 rounded-xl text-center font-bold border-primary/30 bg-primary/5"
+                      />
+                      <p className="text-[10px] text-slate-400 italic">Informasi jam stand-by petugas</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Selesai Pendaftaran:</p>
+                      <Input 
+                        type="time" 
+                        value={endTime} 
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="h-12 rounded-xl text-center font-bold"
+                      />
+                      <p className="text-[10px] text-slate-400 italic">Pendaftaran ditutup otomatis</p>
+                    </div>
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Jam Mulai:</p>
-                        <Input 
-                          type="time" 
-                          value={startTime} 
-                          onChange={(e) => setStartTime(e.target.value)}
-                          className="h-12 rounded-xl text-center font-bold"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Jam Selesai:</p>
-                        <Input 
-                          type="time" 
-                          value={endTime} 
-                          onChange={(e) => setEndTime(e.target.value)}
-                          className="h-12 rounded-xl text-center font-bold"
-                        />
-                      </div>
+                <div className="space-y-6 border-t pt-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CalendarOff className="w-5 h-5 text-primary" />
+                    <Label className="text-sm font-black text-primary uppercase tracking-wider">Manajemen Hari Libur (Cuti Bersama/Tanggal Merah)</Label>
+                  </div>
+                  
+                  <div className="flex flex-col md:flex-row gap-4 items-end">
+                    <div className="flex-1 space-y-2 w-full">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Tambah Tanggal Libur:</p>
+                      <Input 
+                        type="date" 
+                        value={newHoliday} 
+                        onChange={(e) => setNewHoliday(e.target.value)}
+                        className="h-12 rounded-xl font-bold"
+                      />
                     </div>
+                    <Button onClick={addHoliday} className="h-12 rounded-xl px-8 flex gap-2">
+                      <Plus className="w-4 h-4" /> Tambah
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-4">
+                    {holidays.length > 0 ? (
+                      holidays.map((date) => (
+                        <div key={date} className="flex items-center justify-between p-3 bg-rose-50 border border-rose-100 rounded-xl group">
+                          <span className="text-xs font-bold text-rose-700">{new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          <button onClick={() => removeHoliday(date)} className="text-rose-400 hover:text-rose-600 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full py-6 text-center text-muted-foreground text-xs italic border border-dashed rounded-xl">
+                        Belum ada tanggal libur yang ditambahkan.
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -22,7 +22,8 @@ import {
   DEFAULT_CLERKS,
   DEFAULT_OPERATING_DAYS,
   DEFAULT_START_TIME,
-  DEFAULT_END_TIME
+  DEFAULT_END_TIME,
+  DEFAULT_SERVICE_START_TIME
 } from './queue-types';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -35,7 +36,9 @@ let cachedSettings: SystemSettings = {
   videoUrl: '',
   operatingDays: DEFAULT_OPERATING_DAYS,
   startTime: DEFAULT_START_TIME,
-  endTime: DEFAULT_END_TIME
+  endTime: DEFAULT_END_TIME,
+  serviceStartTime: DEFAULT_SERVICE_START_TIME,
+  holidays: []
 };
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -68,7 +71,9 @@ if (typeof window !== 'undefined') {
         lastWhatsAppSentAt: Date.now(),
         operatingDays: DEFAULT_OPERATING_DAYS,
         startTime: DEFAULT_START_TIME,
-        endTime: DEFAULT_END_TIME
+        endTime: DEFAULT_END_TIME,
+        serviceStartTime: DEFAULT_SERVICE_START_TIME,
+        holidays: []
       });
     }
     window.dispatchEvent(new Event('viola_storage_update'));

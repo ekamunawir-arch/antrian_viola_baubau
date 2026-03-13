@@ -18,7 +18,8 @@ import {
   Info,
   Phone,
   CalendarX,
-  CalendarDays
+  CalendarDays,
+  Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -62,6 +63,7 @@ export default function ParticipantIntake() {
   const [finalQueue, setFinalQueue] = useState<Participant | null>(null);
   const [isFull, setIsFull] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
+  const [isHoliday, setIsHoliday] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,14 +84,24 @@ export default function ParticipantIntake() {
     const now = new Date();
     const day = now.getDay(); // 0 (Sun) to 6 (Sat)
     const time = now.getHours() * 100 + now.getMinutes();
+    const todayStr = now.toISOString().split('T')[0];
     
+    // Check Holidays
+    const holidays = currentSettings.holidays || [];
+    if (holidays.includes(todayStr)) {
+      setIsHoliday(true);
+      setIsClosed(true);
+      return;
+    } else {
+      setIsHoliday(false);
+    }
+
     const [startH, startM] = (currentSettings.startTime || "08:00").split(':').map(Number);
     const [endH, endM] = (currentSettings.endTime || "15:00").split(':').map(Number);
     
     const startTimeVal = startH * 100 + startM;
     const endTimeVal = endH * 100 + endM;
     
-    // Hardcoded logic: Only Mon (1) to Fri (5)
     const isWorkingDay = day >= 1 && day <= 5;
     const isWorkingTime = time >= startTimeVal && time <= endTimeVal;
     
@@ -209,7 +221,7 @@ export default function ParticipantIntake() {
                     Sistem Antrian Online
                   </CardDescription>
                   
-                  <div className="bg-amber-100 border-2 border-amber-300 py-3 px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-md animate-pulse">
+                  <div className="bg-amber-100 border-2 border-amber-300 py-3 px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-md">
                     <Ticket className="w-6 h-6 text-amber-600" />
                     <div className="text-left">
                       <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Sisa Kuota Hari Ini</p>
@@ -223,21 +235,41 @@ export default function ParticipantIntake() {
               <CardContent className="px-8 pb-10">
                 {isClosed ? (
                   <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-8 text-center space-y-6">
-                    <CalendarX className="w-16 h-16 text-slate-400 mx-auto" />
+                    {isHoliday ? (
+                      <CalendarX className="w-16 h-16 text-rose-400 mx-auto" />
+                    ) : (
+                      <Clock className="w-16 h-16 text-slate-400 mx-auto" />
+                    )}
                     <div className="space-y-2">
-                      <h3 className="text-2xl font-black text-slate-700">Layanan Sedang Tutup</h3>
-                      <p className="text-slate-500 font-medium">Mohon maaf, saat ini di luar jam operasional pendaftaran.</p>
+                      <h3 className="text-2xl font-black text-slate-700">
+                        {isHoliday ? 'Hari Ini Libur' : 'Layanan Sedang Tutup'}
+                      </h3>
+                      <p className="text-slate-500 font-medium">
+                        {isHoliday 
+                          ? 'Mohon maaf, pendaftaran antrian tidak tersedia karena hari ini merupakan hari libur/cuti bersama.' 
+                          : 'Mohon maaf, pendaftaran antrian hanya tersedia pada jam operasional yang telah ditentukan.'}
+                      </p>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 inline-block text-left shadow-sm">
-                       <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-3 border-b pb-2">Jadwal Operasional VIOLA:</p>
-                       <div className="space-y-2">
-                          <div className="flex items-center gap-2 mb-2">
-                             <CalendarDays className="w-4 h-4 text-primary" />
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 inline-block text-left shadow-sm space-y-4">
+                       <p className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Jadwal Operasional VIOLA:</p>
+                       <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                             <CalendarDays className="w-5 h-5 text-primary shrink-0" />
                              <p className="text-sm font-bold text-slate-700">Senin - Jumat (Kecuali Hari Libur)</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                             <Clock className="w-4 h-4 text-primary" />
-                             <p className="text-sm font-bold text-slate-700">Pendaftaran: {settings?.startTime} - {settings?.endTime} WIB</p>
+                          <div className="flex items-center gap-3">
+                             <Clock className="w-5 h-5 text-primary shrink-0" />
+                             <div>
+                               <p className="text-xs font-black text-primary uppercase tracking-tighter">Jam Pendaftaran:</p>
+                               <p className="text-sm font-bold text-slate-700">{settings?.startTime} - {settings?.endTime} WIB</p>
+                             </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                             <Video className="w-5 h-5 text-[#005a78] shrink-0" />
+                             <div>
+                               <p className="text-xs font-black text-[#005a78] uppercase tracking-tighter">Jam Layanan Zoom:</p>
+                               <p className="text-sm font-bold text-slate-700">Mulai Pukul {settings?.serviceStartTime} WIB</p>
+                             </div>
                           </div>
                        </div>
                     </div>
@@ -249,62 +281,81 @@ export default function ParticipantIntake() {
                     <p className="text-rose-600 font-medium">Mohon maaf, silakan coba lagi besok hari atau hubungi petugas kami.</p>
                   </div>
                 ) : (
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <FormField
-                        control={form.control}
-                        name="fullName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base font-bold text-[#005a78]">Nama Lengkap Sesuai KTP :</FormLabel>
-                            <FormControl>
-                              <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Masukkan nama lengkap Anda" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="whatsapp"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base font-bold text-[#005a78]">Nomor WhatsApp Aktif :</FormLabel>
-                            <FormControl>
-                              <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Contoh: 081234567890" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="space-y-4">
-                        <FormLabel className="text-base font-bold text-[#005a78]">Pilih Jenis Layanan</FormLabel>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {['Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan'].map((type) => (
-                            <Button
-                              key={type}
-                              type="button"
-                              variant={form.watch('serviceType') === type ? 'default' : 'outline'}
-                              className={`h-auto py-4 px-2 text-xs font-bold rounded-xl border-2 transition-all text-center leading-snug ${
-                                form.watch('serviceType') === type 
-                                ? 'bg-[#005a78] border-[#005a78] text-white shadow-lg scale-[1.02]' 
-                                : 'border-[#005a78] text-[#005a78] hover:bg-slate-50'
-                              }`}
-                              onClick={() => form.setValue('serviceType', type as any)}
-                            >
-                              {type}
-                            </Button>
-                          ))}
+                  <div className="space-y-6">
+                    <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 flex flex-col md:flex-row justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="text-[10px] font-black text-primary uppercase leading-tight">Sisa Waktu Pendaftaran</p>
+                          <p className="text-sm font-bold">Hingga pukul {settings?.endTime} WIB</p>
                         </div>
                       </div>
+                      <div className="flex items-center gap-3">
+                        <Video className="w-5 h-5 text-[#005a78]" />
+                        <div>
+                          <p className="text-[10px] font-black text-[#005a78] uppercase leading-tight">Mulai Layanan Zoom</p>
+                          <p className="text-sm font-bold">Pukul {settings?.serviceStartTime} WIB</p>
+                        </div>
+                      </div>
+                    </div>
 
-                      <Button type="submit" disabled={isSubmitting} className="w-full h-16 text-xl font-black bg-primary hover:bg-primary/90 rounded-2xl shadow-xl transition-all hover:scale-[1.01] active:scale-[0.98] uppercase tracking-widest">
-                        {isSubmitting ? 'Memproses...' : 'Ambil Nomor Antrian'}
-                      </Button>
-                    </form>
-                  </Form>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <FormField
+                          control={form.control}
+                          name="fullName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-bold text-[#005a78]">Nama Lengkap Sesuai KTP :</FormLabel>
+                              <FormControl>
+                                <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Masukkan nama lengkap Anda" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="whatsapp"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-bold text-[#005a78]">Nomor WhatsApp Aktif :</FormLabel>
+                              <FormControl>
+                                <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Contoh: 081234567890" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="space-y-4">
+                          <FormLabel className="text-base font-bold text-[#005a78]">Pilih Jenis Layanan</FormLabel>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {['Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan'].map((type) => (
+                              <Button
+                                key={type}
+                                type="button"
+                                variant={form.watch('serviceType') === type ? 'default' : 'outline'}
+                                className={`h-auto py-4 px-2 text-xs font-bold rounded-xl border-2 transition-all text-center leading-snug ${
+                                  form.watch('serviceType') === type 
+                                  ? 'bg-[#005a78] border-[#005a78] text-white shadow-lg scale-[1.02]' 
+                                  : 'border-[#005a78] text-[#005a78] hover:bg-slate-50'
+                                }`}
+                                onClick={() => form.setValue('serviceType', type as any)}
+                              >
+                                {type}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <Button type="submit" disabled={isSubmitting} className="w-full h-16 text-xl font-black bg-primary hover:bg-primary/90 rounded-2xl shadow-xl transition-all hover:scale-[1.01] active:scale-[0.98] uppercase tracking-widest">
+                          {isSubmitting ? 'Memproses...' : 'Ambil Nomor Antrian'}
+                        </Button>
+                      </form>
+                    </Form>
+                  </div>
                 )}
               </CardContent>
             </Card>
