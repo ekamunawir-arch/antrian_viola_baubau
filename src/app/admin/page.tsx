@@ -14,11 +14,7 @@ import {
   ArrowLeft,
   Video,
   User,
-  FileVideo,
   Play,
-  FolderOpen,
-  Info,
-  AlertTriangle,
   CalendarDays
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,8 +26,6 @@ import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const DAYS = [
   { label: 'Min', value: 0 },
@@ -45,7 +39,6 @@ const DAYS = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -54,7 +47,6 @@ export default function AdminDashboard() {
   
   const [dailyQuota, setDailyQuota] = useState(20);
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
-  const [videoUrl, setVideoUrl] = useState('');
   const [operatingDays, setOperatingDays] = useState<number[]>(DEFAULT_OPERATING_DAYS);
   const [startTime, setStartTime] = useState(DEFAULT_START_TIME);
   const [endTime, setEndTime] = useState(DEFAULT_END_TIME);
@@ -66,7 +58,6 @@ export default function AdminDashboard() {
     setParticipants(data.participants);
     setDailyQuota(settings.dailyQuota);
     setZoomLink(settings.zoomLink);
-    setVideoUrl(settings.videoUrl || '');
     setClerks(settings.clerks);
     setOperatingDays(settings.operatingDays || DEFAULT_OPERATING_DAYS);
     setStartTime(settings.startTime || DEFAULT_START_TIME);
@@ -95,7 +86,6 @@ export default function AdminDashboard() {
       dailyQuota, 
       zoomLink, 
       clerks, 
-      videoUrl, 
       operatingDays, 
       startTime, 
       endTime 
@@ -108,17 +98,6 @@ export default function AdminDashboard() {
     setOperatingDays(prev => 
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     );
-  };
-
-  const handleFileBrowse = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setVideoUrl(`/video/${file.name}`);
-      toast({ 
-        title: "File Dipilih", 
-        description: `Nama file tercatat: ${file.name}. Silakan ikuti instruksi upload di bawah.` 
-      });
-    }
   };
 
   const downloadCSV = () => {
@@ -374,61 +353,6 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-4 border-t pt-6">
-                  <Label htmlFor="videoUrl" className="text-sm font-black text-primary uppercase tracking-wider">Pilih Video Dashboard</Label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <FileVideo className="w-4 h-4" />
-                      </div>
-                      <Input 
-                        id="videoUrl"
-                        type="text" 
-                        value={videoUrl} 
-                        readOnly
-                        placeholder="/video/nama-file.mp4"
-                        className="h-12 pl-12 rounded-xl text-sm font-medium bg-slate-50 cursor-not-allowed"
-                      />
-                    </div>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
-                      accept="video/*" 
-                      onChange={handleFileBrowse}
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="h-12 rounded-xl px-6 font-bold flex gap-2 border-primary text-primary hover:bg-primary/5"
-                    >
-                      <FolderOpen className="w-4 h-4" /> Browse
-                    </Button>
-                  </div>
-
-                  <Alert className="bg-amber-50 border-amber-200">
-                    <AlertTriangle className="h-5 w-5 text-amber-600" />
-                    <AlertTitle className="text-amber-800 font-black">PENTING: Langkah Wajib Upload!</AlertTitle>
-                    <AlertDescription className="text-amber-700 text-xs mt-2 space-y-3">
-                      <p>Tombol <strong>Browse</strong> di atas hanya mencatat "Nama File" Anda. browser tidak dapat mengunggah file secara otomatis dari komputer Anda karena alasan keamanan.</p>
-                      
-                      <div className="space-y-1">
-                        <p className="font-bold underline">Anda harus melakukan hal berikut secara manual:</p>
-                        <ol className="list-decimal ml-4 space-y-1">
-                          <li>Buka <strong>File Explorer</strong> di panel kiri Editor ini.</li>
-                          <li>Cari folder bernama <strong>public</strong>.</li>
-                          <li>Klik kanan pada folder <strong>public</strong>, pilih <strong>New Folder</strong> dan beri nama <code className="bg-white/50 px-1 font-bold">video</code> (jika belum ada).</li>
-                          <li><strong>Upload/Tarik (Drag & Drop)</strong> file video dari laptop Anda ke dalam folder <code className="bg-white/50 px-1 font-bold">public/video/</code> tersebut.</li>
-                          <li>Pastikan nama file di folder tersebut <strong>SAMA PERSIS</strong> dengan nama yang dipilih melalui tombol Browse di atas.</li>
-                        </ol>
-                      </div>
-                      
-                      <p className="text-rose-600 font-black italic">Catatan: Disarankan nama file tanpa spasi untuk menghindari error pembacaan URL.</p>
-                    </AlertDescription>
-                  </Alert>
                 </div>
 
                 <div className="pt-6 border-t">
