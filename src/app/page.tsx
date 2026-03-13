@@ -17,7 +17,8 @@ import {
   MessageSquare,
   Info,
   Phone,
-  CalendarX
+  CalendarX,
+  CalendarDays
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -79,7 +80,7 @@ export default function ParticipantIntake() {
 
   const checkOperatingTime = (currentSettings: SystemSettings) => {
     const now = new Date();
-    const day = now.getDay();
+    const day = now.getDay(); // 0 (Sun) to 6 (Sat)
     const time = now.getHours() * 100 + now.getMinutes();
     
     const [startH, startM] = (currentSettings.startTime || "08:00").split(':').map(Number);
@@ -88,7 +89,8 @@ export default function ParticipantIntake() {
     const startTimeVal = startH * 100 + startM;
     const endTimeVal = endH * 100 + endM;
     
-    const isWorkingDay = currentSettings.operatingDays?.includes(day) ?? true;
+    // Hardcoded logic: Only Mon (1) to Fri (5)
+    const isWorkingDay = day >= 1 && day <= 5;
     const isWorkingTime = time >= startTimeVal && time <= endTimeVal;
     
     setIsClosed(!(isWorkingDay && isWorkingTime));
@@ -174,11 +176,6 @@ export default function ParticipantIntake() {
   const dailyQuota = settings?.dailyQuota || 20;
   const remainingQuota = Math.max(0, dailyQuota - queueInfo.total);
 
-  const getDayName = (dayIndex: number) => {
-    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    return days[dayIndex];
-  };
-
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
       <header className="bg-[#005a78] text-white p-4 flex justify-between items-center shadow-lg">
@@ -234,14 +231,14 @@ export default function ParticipantIntake() {
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 inline-block text-left shadow-sm">
                        <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-3 border-b pb-2">Jadwal Operasional VIOLA:</p>
                        <div className="space-y-2">
-                          <p className="text-sm font-bold text-slate-700 flex justify-between gap-8">
-                             <span>Hari:</span> 
-                             <span className="text-primary">{(settings?.operatingDays || []).map(d => getDayName(d).substring(0, 3)).join(', ')}</span>
-                          </p>
-                          <p className="text-sm font-bold text-slate-700 flex justify-between gap-8">
-                             <span>Jam:</span> 
-                             <span className="text-primary">{settings?.startTime} - {settings?.endTime} WIB</span>
-                          </p>
+                          <div className="flex items-center gap-2 mb-2">
+                             <CalendarDays className="w-4 h-4 text-primary" />
+                             <p className="text-sm font-bold text-slate-700">Senin - Jumat (Kecuali Hari Libur)</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <Clock className="w-4 h-4 text-primary" />
+                             <p className="text-sm font-bold text-slate-700">Pendaftaran: {settings?.startTime} - {settings?.endTime} WIB</p>
+                          </div>
                        </div>
                     </div>
                   </div>

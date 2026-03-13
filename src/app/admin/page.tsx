@@ -21,21 +21,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, getSettings, saveSettings } from '@/lib/queue-store';
-import { Participant, DEFAULT_ZOOM_LINK, CounterClerk, DEFAULT_OPERATING_DAYS, DEFAULT_START_TIME, DEFAULT_END_TIME } from '@/lib/queue-types';
+import { Participant, DEFAULT_ZOOM_LINK, DEFAULT_OPERATING_DAYS, DEFAULT_START_TIME, DEFAULT_END_TIME } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-const DAYS = [
-  { label: 'Min', value: 0 },
-  { label: 'Sen', value: 1 },
-  { label: 'Sel', value: 2 },
-  { label: 'Rab', value: 3 },
-  { label: 'Kam', value: 4 },
-  { label: 'Jum', value: 5 },
-  { label: 'Sab', value: 6 },
-];
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -47,10 +37,8 @@ export default function AdminDashboard() {
   
   const [dailyQuota, setDailyQuota] = useState(20);
   const [zoomLink, setZoomLink] = useState(DEFAULT_ZOOM_LINK);
-  const [operatingDays, setOperatingDays] = useState<number[]>(DEFAULT_OPERATING_DAYS);
   const [startTime, setStartTime] = useState(DEFAULT_START_TIME);
   const [endTime, setEndTime] = useState(DEFAULT_END_TIME);
-  const [clerks, setClerks] = useState<CounterClerk[]>([]);
 
   const fetchQueue = () => {
     const data = getQueueData();
@@ -58,8 +46,6 @@ export default function AdminDashboard() {
     setParticipants(data.participants);
     setDailyQuota(settings.dailyQuota);
     setZoomLink(settings.zoomLink);
-    setClerks(settings.clerks);
-    setOperatingDays(settings.operatingDays || DEFAULT_OPERATING_DAYS);
     setStartTime(settings.startTime || DEFAULT_START_TIME);
     setEndTime(settings.endTime || DEFAULT_END_TIME);
     setLastSync(new Date());
@@ -85,19 +71,13 @@ export default function AdminDashboard() {
     saveSettings({ 
       dailyQuota, 
       zoomLink, 
-      clerks, 
-      operatingDays, 
+      clerks: getSettings().clerks, 
+      operatingDays: DEFAULT_OPERATING_DAYS, // Reset to Mon-Fri default
       startTime, 
       endTime 
     });
     toast({ title: "Pengaturan Disimpan", description: `Pengaturan sistem VIOLA telah diperbarui.` });
     setActiveTab('dashboard');
-  };
-
-  const toggleDay = (day: number) => {
-    setOperatingDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
   };
 
   const downloadCSV = () => {
@@ -177,10 +157,10 @@ export default function AdminDashboard() {
             </Button>
             <Button 
               variant={activeTab === 'settings' ? 'secondary' : 'outline'} 
-              onClick={() => setActiveTab(activeTab === 'dashboard' ? 'settings' : 'dashboard')} 
+              onClick={() => setActiveTab('settings')} 
               className="rounded-xl flex gap-2"
             >
-              <Settings className="w-4 h-4" /> Setting
+              <Settings className="w-4 h-4" /> Pengaturan
             </Button>
             <Button variant="outline" onClick={downloadCSV} className="rounded-xl flex gap-2">
               <Download className="w-4 h-4" /> Unduh CSV
@@ -309,26 +289,15 @@ export default function AdminDashboard() {
                 <div className="space-y-6 border-t pt-6">
                   <div className="flex items-center gap-2 mb-2">
                     <CalendarDays className="w-5 h-5 text-primary" />
-                    <Label className="text-sm font-black text-primary uppercase tracking-wider">Waktu Operasional Pendaftaran</Label>
+                    <Label className="text-sm font-black text-primary uppercase tracking-wider">Jam Operasional Pendaftaran</Label>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-muted-foreground uppercase">Pilih Hari Aktif:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {DAYS.map((day) => (
-                          <div 
-                            key={day.value}
-                            onClick={() => toggleDay(day.value)}
-                            className={`px-3 py-2 rounded-lg cursor-pointer transition-all border-2 text-xs font-bold ${
-                              operatingDays.includes(day.value)
-                                ? 'bg-primary border-primary text-white shadow-md'
-                                : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-primary/30'
-                            }`}
-                          >
-                            {day.label}
-                          </div>
-                        ))}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-primary/20 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-xs font-black uppercase text-primary tracking-[0.2em] mb-1">Hari Kerja</p>
+                        <p className="text-lg font-bold text-slate-700">Senin - Jumat</p>
+                        <p className="text-[10px] text-muted-foreground italic">(Kecuali Hari Libur Nasional)</p>
                       </div>
                     </div>
 
