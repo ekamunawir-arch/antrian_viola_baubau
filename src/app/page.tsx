@@ -198,14 +198,7 @@ export default function ParticipantIntake() {
             <p className="text-[10px] opacity-70 uppercase tracking-[0.2em]">Virtual Office Layanan Peserta</p>
           </div>
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" size="sm" onClick={() => router.push('/')} className="bg-sky-900 hover:bg-sky-800 text-white border-none rounded-xl h-10 px-4">
-            <Home className="w-4 h-4 mr-2" /> Beranda
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/admin')} className="text-white hover:bg-white/10 rounded-xl h-10 px-4">
-            <Settings className="w-4 h-4 mr-2" /> Admin
-          </Button>
-        </div>
+        {/* Buttons removed to keep it as a kiosk display for participants */}
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
