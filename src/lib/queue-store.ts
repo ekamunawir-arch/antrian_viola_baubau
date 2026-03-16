@@ -108,18 +108,6 @@ export const saveSettings = async (settings: SystemSettings) => {
   await setDoc(docRef, settings, { merge: true });
 };
 
-export const clearQueueData = async () => {
-  const today = getTodayDate();
-  const q = query(collection(db, 'participants'), where('date', '==', today));
-  const snapshot = await getDocs(q);
-  
-  const batch = writeBatch(db);
-  snapshot.docs.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-  await batch.commit();
-};
-
 export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber' | 'timestamp' | 'status'>): Promise<{ success: boolean; error?: string; participant?: Participant }> => {
   const today = getTodayDate();
   
@@ -164,7 +152,9 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
     const docRef = await addDoc(collection(db, 'participants'), newParticipantData);
     const newParticipant = { id: docRef.id, ...newParticipantData };
 
+    // Async WhatsApp background process with logging
     const scheduleWhatsApp = async () => {
+      console.log(`[WA] Memulai proses pengiriman untuk ${newParticipant.queueNumber}...`);
       const settingsRef = doc(db, 'settings', 'config');
       
       try {
@@ -177,18 +167,17 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
             lastSentAt = configDoc.data().lastWhatsAppSentAt;
           }
 
-          const scheduledFor = Math.max(now + 10000, lastSentAt + 45000);
-          
+          const scheduledFor = Math.max(now + 5000, lastSentAt + 15000); // 15s gap
           transaction.update(settingsRef, { lastWhatsAppSentAt: scheduledFor });
           return scheduledFor;
         });
 
         const waitMs = targetTime - Date.now();
-        console.log(`WhatsApp ${newParticipant.queueNumber} dijadwalkan dalam ${waitMs / 1000} detik...`);
+        console.log(`[WA] Pesan dijadwalkan dalam ${Math.round(waitMs / 1000)} detik untuk ${newParticipant.whatsapp}...`);
         
         await delay(waitMs);
 
-        const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas.\n\nLink Zoom:\n${settings.zoomLink}`;
+        const message = `*VIOLA – Virtual Office Layanan Peserta*\n\nNomor Antrian Anda : *${newParticipant.queueNumber}*\nLayanan : ${newParticipant.serviceType}\n\nSilakan menunggu panggilan petugas di area layanan atau melalui dashboard.\n\nLink Zoom Layanan:\n${settings.zoomLink}`;
 
         const waResponse = await fetch("/api/send-whatsapp", {
           method: "POST",
@@ -203,12 +192,12 @@ export const addParticipant = async (data: Omit<Participant, 'id' | 'queueNumber
         if (waResult.success) {
           const pRef = doc(db, 'participants', newParticipant.id);
           await updateDoc(pRef, { whatsappSentAt: new Date().toISOString() });
-          console.log(`WhatsApp terkirim untuk ${newParticipant.queueNumber} sesuai jadwal.`);
+          console.log(`[WA] BERHASIL! Notifikasi WhatsApp terkirim ke ${newParticipant.whatsapp}`);
         } else {
-          console.error(`Gagal mengirim WhatsApp: ${waResult.error}`);
+          console.error(`[WA] GAGAL: ${waResult.error}`);
         }
-      } catch (err) {
-        console.error("Kesalahan pada alur penjadwalan WhatsApp:", err);
+      } catch (err: any) {
+        console.error("[WA] ERROR PADA SISTEM NOTIFIKASI:", err.message);
       }
     };
 

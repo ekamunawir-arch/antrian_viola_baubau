@@ -10,16 +10,13 @@ import {
   CheckCircle2, 
   XCircle, 
   RefreshCcw, 
-  Home,
-  Settings,
-  AlertCircle,
   Ticket,
   MessageSquare,
-  Info,
   Phone,
   CalendarX,
   CalendarDays,
-  Video
+  Video,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,7 +44,6 @@ import { Participant, ServiceType, SystemSettings } from '@/lib/queue-types';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   fullName: z.string().min(3, "Nama lengkap minimal 3 karakter"),
@@ -58,7 +54,6 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function ParticipantIntake() {
-  const router = useRouter();
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [finalQueue, setFinalQueue] = useState<Participant | null>(null);
   const [isFull, setIsFull] = useState(false);
@@ -81,12 +76,12 @@ export default function ParticipantIntake() {
   });
 
   const checkOperatingTime = (currentSettings: SystemSettings) => {
+    if (!currentSettings) return;
     const now = new Date();
-    const day = now.getDay(); // 0 (Sun) to 6 (Sat)
+    const day = now.getDay();
     const time = now.getHours() * 100 + now.getMinutes();
     const todayStr = now.toISOString().split('T')[0];
     
-    // Check Holidays
     const holidays = currentSettings.holidays || [];
     if (holidays.includes(todayStr)) {
       setIsHoliday(true);
@@ -111,14 +106,12 @@ export default function ParticipantIntake() {
   const updateQueueInfo = () => {
     const { participants } = getQueueData();
     const currentSettings = getSettings();
-    setSettings(currentSettings);
+    setSettings({ ...currentSettings });
     setIsFull(participants.length >= (currentSettings.dailyQuota || 20));
     checkOperatingTime(currentSettings);
     
     const activeParticipants = participants.filter(p => 
-      p.status === 'Being Served' || 
-      p.status === 'Called' || 
-      p.status === 'called'
+      ['Being Served', 'Called', 'called'].includes(p.status)
     );
 
     setQueueInfo({
@@ -137,7 +130,8 @@ export default function ParticipantIntake() {
     
     const syncInterval = setInterval(() => {
       refreshQueueData();
-      if (settings) checkOperatingTime(settings);
+      const current = getSettings();
+      checkOperatingTime(current);
     }, 15000);
 
     window.addEventListener('viola_storage_update', updateQueueInfo);
@@ -145,7 +139,7 @@ export default function ParticipantIntake() {
       clearInterval(syncInterval);
       window.removeEventListener('viola_storage_update', updateQueueInfo);
     };
-  }, [settings]);
+  }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -185,6 +179,8 @@ export default function ParticipantIntake() {
     setPendingData(null);
   };
 
+  if (!mounted) return null;
+
   const dailyQuota = settings?.dailyQuota || 20;
   const remainingQuota = Math.max(0, dailyQuota - queueInfo.total);
 
@@ -198,7 +194,6 @@ export default function ParticipantIntake() {
             <p className="text-[10px] opacity-70 uppercase tracking-[0.2em]">Virtual Office Layanan Peserta</p>
           </div>
         </div>
-        {/* Buttons removed to keep it as a kiosk display for participants */}
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -395,7 +390,7 @@ export default function ParticipantIntake() {
             <div className="space-y-1">
               <h2 className="text-3xl font-black text-[#005a78] font-headline tracking-tight">Informasi Antrian</h2>
               <p className="text-sm text-muted-foreground font-medium">
-                {mounted ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()) : '...'}
+                {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
               </p>
             </div>
             <Badge variant="outline" className="mb-1 bg-white border-none shadow-sm flex gap-2 py-1.5 px-3">

@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import * as wav from 'wav';
+import wav from 'wav';
 
 const AdminQueueCallAnnouncementInputSchema = z.object({
   queueNumber: z.string().describe('The queue number to be announced (e.g., A01).'),
@@ -26,11 +26,6 @@ export type AdminQueueCallAnnouncementOutput = z.infer<typeof AdminQueueCallAnno
 
 /**
  * Converts PCM audio data to WAV format.
- * @param pcmData The PCM audio data buffer.
- * @param channels The number of audio channels (default: 1).
- * @param rate The sample rate (default: 24000).
- * @param sampleWidth The sample width in bytes (default: 2).
- * @returns A Promise that resolves to the base64 encoded WAV audio string.
  */
 async function toWav(
   pcmData: Buffer,
@@ -104,7 +99,6 @@ const adminQueueCallAnnouncementFlow = ai.defineFlow(
       };
     } catch (error: any) {
       console.error('Error generating announcement:', error);
-      // Handle Rate Limit/Quota error explicitly without throwing
       if (error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429')) {
         return {
           audioDataUri: '',
