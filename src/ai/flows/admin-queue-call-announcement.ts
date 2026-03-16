@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import * as wav from 'wav';
+import wav from 'wav';
 
 const AdminQueueCallAnnouncementInputSchema = z.object({
   queueNumber: z.string().describe('The queue number to be announced (e.g., A01).'),

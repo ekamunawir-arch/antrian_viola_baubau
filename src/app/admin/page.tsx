@@ -35,7 +35,7 @@ export default function AdminDashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [lastSync, setLastSync] = useState(new Date());
+  const [lastSync, setLastSync] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'settings'>('settings');
   
   const [dailyQuota, setDailyQuota] = useState(20);
@@ -75,8 +75,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSaveSettings = () => {
-    saveSettings({ 
+  const handleSaveSettings = async () => {
+    await saveSettings({ 
       dailyQuota, 
       zoomLink, 
       clerks: getSettings().clerks, 
@@ -171,7 +171,7 @@ export default function AdminDashboard() {
             <div>
               <h1 className="text-2xl font-black font-headline text-primary tracking-tight">Panel Admin VIOLA</h1>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Update Terakhir: {lastSync.toLocaleTimeString()}
+                <Clock className="w-3 h-3" /> Update Terakhir: {lastSync ? lastSync.toLocaleTimeString() : '---'}
               </p>
             </div>
           </div>
