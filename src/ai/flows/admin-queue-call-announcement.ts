@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import wav from 'wav';
+import * as wav from 'wav';
 
 const AdminQueueCallAnnouncementInputSchema = z.object({
   queueNumber: z.string().describe('The queue number to be announced (e.g., A01).'),
@@ -103,6 +103,7 @@ const adminQueueCallAnnouncementFlow = ai.defineFlow(
         audioDataUri: 'data:audio/wav;base64,' + wavBase64,
       };
     } catch (error: any) {
+      console.error('Error generating announcement:', error);
       // Handle Rate Limit/Quota error explicitly without throwing
       if (error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429')) {
         return {
@@ -110,8 +111,10 @@ const adminQueueCallAnnouncementFlow = ai.defineFlow(
           error: 'QUOTA_EXHAUSTED'
         };
       }
-      // Re-throw other unexpected errors
-      throw error;
+      return {
+        audioDataUri: '',
+        error: error.message || 'INTERNAL_ERROR'
+      };
     }
   }
 );

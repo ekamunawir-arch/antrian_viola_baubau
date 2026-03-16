@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -16,15 +15,21 @@ export default function PublicDashboard() {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const fetchData = () => {
-    const data = getQueueData();
-    const currentSettings = getSettings();
-    setParticipants(data.participants);
-    setSettings(currentSettings);
+    try {
+      const data = getQueueData();
+      const currentSettings = getSettings();
+      setParticipants(data.participants || []);
+      setSettings(currentSettings);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+    }
   };
 
   useEffect(() => {
+    setMounted(true);
     setCurrentTime(new Date());
     fetchData();
     
@@ -42,7 +47,6 @@ export default function PublicDashboard() {
       clearInterval(clockInterval);
       clearInterval(syncInterval);
       window.removeEventListener('viola_storage_update', fetchData);
-      // Cleanup blob URL to prevent memory leaks
       if (localVideoUrl) {
         URL.revokeObjectURL(localVideoUrl);
       }
@@ -94,7 +98,9 @@ export default function PublicDashboard() {
   const nextInQueue = participants.find(p => p.status === 'Waiting');
   const totalToday = participants.length;
 
-  const currentVideoSource = localVideoUrl || (settings?.videoUrl ? encodeURI(settings.videoUrl) : null);
+  const currentVideoSource = localVideoUrl || (settings?.videoUrl ? String(settings.videoUrl).trim() : null);
+
+  if (!mounted) return <div className="min-h-screen bg-background" />;
 
   return (
     <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden">
@@ -147,7 +153,6 @@ export default function PublicDashboard() {
                 </div>
               )}
 
-              {/* Local Video Picker Button */}
               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 <input 
                   type="file" 
