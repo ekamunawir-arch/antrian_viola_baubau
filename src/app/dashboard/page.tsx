@@ -5,17 +5,26 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
+import { toast } from '@/hooks/use-toast';
 
 export default function PublicDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  
+  // State untuk Audio Panggilan
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  const [announcedIds, setAnnouncedIds] = useState<Set<string>>(new Set());
+  const [isCalling, setIsCalling] = useState(false);
 
   const fetchData = () => {
     try {
@@ -52,6 +61,55 @@ export default function PublicDashboard() {
       }
     };
   }, [localVideoUrl]);
+
+  // Efek Listener untuk Panggilan Suara Otomatis
+  useEffect(() => {
+    if (!isAudioEnabled || isCalling) return;
+
+    // Cari peserta yang statusnya 'Called' atau 'called' dan belum diumumkan
+    const toAnnounce = participants.find(p => 
+      (p.status === 'Called' || p.status === 'called') && !announcedIds.has(p.id)
+    );
+
+    if (toAnnounce) {
+      handleAutoAnnouncement(toAnnounce);
+    }
+  }, [participants, isAudioEnabled, announcedIds, isCalling]);
+
+  const handleAutoAnnouncement = async (participant: Participant) => {
+    setIsCalling(true);
+    try {
+      console.log(`[AUDIO] Memulai panggilan untuk: ${participant.queueNumber} - ${participant.fullName}`);
+      
+      const result = await adminQueueCallAnnouncement({
+        queueNumber: participant.queueNumber,
+        participantName: participant.fullName
+      });
+
+      if (result.audioDataUri) {
+        if (!audioRef.current) {
+          audioRef.current = new Audio();
+        }
+        audioRef.current.src = result.audioDataUri;
+        
+        // Tambahkan ID ke set agar tidak dipanggil ulang
+        setAnnouncedIds(prev => new Set(prev).add(participant.id));
+        
+        await audioRef.current.play();
+        
+        // Tunggu audio selesai (asumsi rata-rata 5-7 detik) sebelum memproses antrian suara berikutnya
+        audioRef.current.onended = () => {
+          setIsCalling(false);
+        };
+      } else {
+        console.error("[AUDIO] Gagal mendapatkan data audio:", result.error);
+        setIsCalling(false);
+      }
+    } catch (error) {
+      console.error("[AUDIO] Error saat memanggil antrian:", error);
+      setIsCalling(false);
+    }
+  };
 
   const handleLocalVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,6 +148,16 @@ export default function PublicDashboard() {
     return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
   };
 
+  const toggleAudio = () => {
+    setIsAudioEnabled(!isAudioEnabled);
+    if (!isAudioEnabled) {
+      toast({
+        title: "Audio Diaktifkan",
+        description: "Dashboard sekarang akan memanggil antrian secara otomatis.",
+      });
+    }
+  };
+
   const beingServedList = participants.filter(p => 
     p.status === 'Being Served' || p.status === 'Called' || p.status === 'called'
   ).slice(0, 3);
@@ -104,11 +172,28 @@ export default function PublicDashboard() {
 
   return (
     <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden">
+      {/* Header Dashboard */}
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
-        <div className="space-y-1">
-          <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
-          <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.5em]">Virtual Office Layanan Peserta</p>
+        <div className="flex items-center gap-6">
+          <div className="space-y-1">
+            <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
+            <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.5em]">Virtual Office Layanan Peserta</p>
+          </div>
+          
+          {/* Audio Status Toggle */}
+          <Button 
+            variant={isAudioEnabled ? "default" : "destructive"} 
+            className="rounded-2xl h-14 px-6 flex gap-3 shadow-lg transition-all animate-in fade-in zoom-in"
+            onClick={toggleAudio}
+          >
+            {isAudioEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+            <div className="text-left">
+              <p className="text-[10px] font-black uppercase leading-tight">{isAudioEnabled ? 'Audio Aktif' : 'Audio Mati'}</p>
+              <p className="text-xs font-bold leading-tight">{isAudioEnabled ? 'Panggilan Otomatis' : 'Klik Aktifkan Suara'}</p>
+            </div>
+          </Button>
         </div>
+
         <div className="text-right">
           <div className="text-4xl font-black tabular-nums leading-none">
             {currentTime ? currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
@@ -120,6 +205,7 @@ export default function PublicDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
+        {/* Konten Kiri: Video & Informasi Berikutnya */}
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
           <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900 overflow-hidden relative">
@@ -205,6 +291,7 @@ export default function PublicDashboard() {
           </div>
         </div>
 
+        {/* Konten Kanan: Sedang Dilayani & Antrian Selesai */}
         <div className="lg:col-span-4 flex flex-col gap-6 min-h-0">
           <Card className="bg-white shadow-xl border-t-8 border-t-primary overflow-hidden flex flex-col shrink-0">
             <div className="bg-primary/5 p-4 border-b flex items-center gap-3 shrink-0">
@@ -214,11 +301,16 @@ export default function PublicDashboard() {
             <CardContent className="p-4 space-y-4 overflow-hidden">
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
-                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg">
-                    <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center border border-white/20 shrink-0">
+                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg relative overflow-hidden group">
+                    {/* Indikator Animasi jika Sedang Dipanggil */}
+                    {(p.status === 'Called' || p.status === 'called') && (
+                      <div className="absolute inset-0 bg-primary/20 animate-pulse pointer-events-none" />
+                    )}
+                    
+                    <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center border border-white/20 shrink-0 z-10">
                       <span className="text-xl font-black whitespace-nowrap px-1">{p.queueNumber}</span>
                     </div>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden z-10">
                       <div className="flex justify-between items-center mb-1">
                         <p className="text-lg font-bold truncate leading-none">{p.fullName}</p>
                         <Badge className="bg-white/20 text-white text-[10px] font-black uppercase border-none">
