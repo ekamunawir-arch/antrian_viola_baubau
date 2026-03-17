@@ -5,10 +5,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, Play, Sparkles } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
+import { cn } from '@/lib/utils';
 
 export default function PublicDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,7 +28,6 @@ export default function PublicDashboard() {
   const [aiError, setAiError] = useState<string | null>(null);
   
   // Menyimpan timestamp terakhir yang berhasil dipanggil untuk setiap ID peserta
-  // Ini kunci untuk fitur RECALL
   const [announcedTimestamps, setAnnouncedTimestamps] = useState<Record<string, string>>({});
 
   const fetchData = () => {
@@ -87,7 +87,7 @@ export default function PublicDashboard() {
   }, [participants, isStarted, announcedTimestamps, isCalling]);
 
   /**
-   * Menggunakan Gemini AI TTS (Premium)
+   * Menggunakan Gemini AI TTS
    */
   const handleAiAnnouncement = async (participant: Participant) => {
     setIsCalling(true);
@@ -101,9 +101,9 @@ export default function PublicDashboard() {
 
       if (result.error) {
         if (result.error === 'QUOTA_EXHAUSTED') {
-          setAiError("Kuota AI Habis, mohon tunggu 1 menit.");
+          setAiError("Kuota AI Habis");
         } else {
-          setAiError("Gangguan koneksi AI.");
+          setAiError("AI Error");
         }
         setIsCalling(false);
         return;
@@ -175,7 +175,7 @@ export default function PublicDashboard() {
     setIsStarted(true);
     toast({
       title: "Monitoring Aktif",
-      description: "Panggilan antrian otomatis (AI Premium) telah diaktifkan.",
+      description: "Panggilan antrian otomatis telah diaktifkan.",
     });
   };
 
@@ -225,28 +225,27 @@ export default function PublicDashboard() {
             <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
             <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.5em]">Virtual Office Layanan Peserta</p>
           </div>
-          
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 bg-primary/5 text-primary px-4 py-2 rounded-2xl border border-primary/20">
-              <Sparkles className={`w-5 h-5 ${isCalling ? 'animate-spin' : ''}`} />
-              <span className="text-xs font-black uppercase tracking-wider">
-                {isCalling ? 'AI Sedang Memanggil...' : 'AI Premium Aktif'}
-              </span>
-            </div>
-            {aiError && (
-              <div className="flex items-center gap-1.5 text-[10px] font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full animate-bounce">
-                <AlertCircle className="w-3 h-3" /> {aiError}
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="text-right">
           <div className="text-4xl font-black tabular-nums leading-none">
             {currentTime ? currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
           </div>
-          <div className="text-sm font-bold text-muted-foreground uppercase mt-2 tracking-widest">
-            {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '...'}
+          <div className="flex items-center justify-end gap-3 mt-2">
+            <div className="flex flex-col items-end">
+              <span className={cn(
+                "text-[8px] font-black uppercase tracking-[0.3em] transition-all duration-700",
+                isCalling ? "text-primary animate-pulse opacity-100" : "text-foreground/[0.04]"
+              )}>
+                {isCalling ? 'AI Memanggil' : 'AI Standby'}
+              </span>
+              {aiError && (
+                <span className="text-[7px] font-black text-rose-500 uppercase tracking-tighter">{aiError}</span>
+              )}
+            </div>
+            <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+              {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '...'}
+            </div>
           </div>
         </div>
       </div>
