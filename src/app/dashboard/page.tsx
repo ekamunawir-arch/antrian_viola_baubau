@@ -27,6 +27,7 @@ export default function PublicDashboard() {
   const [aiError, setAiError] = useState<string | null>(null);
   
   // Menyimpan timestamp terakhir yang berhasil dipanggil untuk setiap ID peserta
+  // Ini kunci untuk fitur RECALL
   const [announcedTimestamps, setAnnouncedTimestamps] = useState<Record<string, string>>({});
 
   const fetchData = () => {
@@ -69,12 +70,14 @@ export default function PublicDashboard() {
   useEffect(() => {
     if (!isStarted || isCalling) return;
 
+    // Cari peserta yang statusnya 'Called'
     const toAnnounce = participants.find(p => {
       const isCalledStatus = (p.status === 'Called' || p.status === 'called');
       if (!isCalledStatus || !p.calledAt) return false;
 
       const lastKnownTime = announcedTimestamps[p.id];
-      // Panggil jika belum pernah dipanggil ATAU ada timestamp panggil baru (Recall)
+      // RECALL LOGIC: 
+      // Panggil jika belum pernah dipanggil ATAU jam panggil di DB (calledAt) lebih baru dari memori lokal
       return !lastKnownTime || p.calledAt > lastKnownTime;
     });
 
@@ -111,17 +114,19 @@ export default function PublicDashboard() {
         audioRef.current.play().catch(e => console.error("Audio play error:", e));
         
         audioRef.current.onended = () => {
-          // Update timestamp agar tidak terpanggil ulang secara otomatis
+          // Update timestamp agar tidak terpanggil ulang secara otomatis kecuali ada Recall (timestamp baru)
           setAnnouncedTimestamps(prev => ({
             ...prev,
             [participant.id]: participant.calledAt || new Date().toISOString()
           }));
           
-          // JEDA AMAN 5 DETIK untuk menjaga Quota AI
+          // JEDA AMAN 5 DETIK untuk menjaga Quota AI (Cooldown)
           setTimeout(() => {
             setIsCalling(false);
           }, 5000);
         };
+      } else {
+        setIsCalling(false);
       }
     } catch (error) {
       console.error("AI Announcement Error:", error);
