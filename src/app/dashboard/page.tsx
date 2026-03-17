@@ -5,12 +5,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, Play } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, Play, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 
 export default function PublicDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -22,6 +24,8 @@ export default function PublicDashboard() {
   // State untuk Kontrol Audio & Monitoring
   const [isStarted, setIsStarted] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  
   // Menyimpan timestamp terakhir yang berhasil dipanggil untuk setiap ID peserta
   const [announcedTimestamps, setAnnouncedTimestamps] = useState<Record<string, string>>({});
 
@@ -61,7 +65,7 @@ export default function PublicDashboard() {
     };
   }, [localVideoUrl]);
 
-  // Efek Listener untuk Panggilan Suara Otomatis Lokal
+  // Efek Listener untuk Panggilan Suara Otomatis via AI
   useEffect(() => {
     if (!isStarted || isCalling) return;
 
@@ -70,76 +74,59 @@ export default function PublicDashboard() {
       if (!isCalledStatus || !p.calledAt) return false;
 
       const lastKnownTime = announcedTimestamps[p.id];
+      // Panggil jika belum pernah dipanggil ATAU ada timestamp panggil baru (Recall)
       return !lastKnownTime || p.calledAt > lastKnownTime;
     });
 
     if (toAnnounce) {
-      handleLocalAnnouncement(toAnnounce);
+      handleAiAnnouncement(toAnnounce);
     }
   }, [participants, isStarted, announcedTimestamps, isCalling]);
 
   /**
-   * Mengucapkan teks menggunakan Web Speech API (TTS Lokal)
+   * Menggunakan Gemini AI TTS (Premium)
    */
-  const handleLocalAnnouncement = (participant: Participant) => {
-    if (!window.speechSynthesis) {
-      console.error("Browser ini tidak mendukung Web Speech API");
-      return;
-    }
-
+  const handleAiAnnouncement = async (participant: Participant) => {
     setIsCalling(true);
+    setAiError(null);
 
-    // Format nomor antrian agar dieja (misal A-01 -> A, kosong, satu)
-    const formatNumberForSpeech = (num: string) => {
-      return num
-        .replace('-', ' ')
-        .split('')
-        .map(char => {
-          if (char === '0') return 'kosong';
-          return char;
-        })
-        .join(' ');
-    };
+    try {
+      const result = await adminQueueCallAnnouncement({
+        queueNumber: participant.queueNumber,
+        participantName: participant.fullName
+      });
 
-    const nomorEjaan = formatNumberForSpeech(participant.queueNumber);
-    const petugas = participant.servedBy || participant.staffName || "Petugas Layanan";
-    const textToSpeak = `Nomor antrean. ${nomorEjaan}. silakan menuju. ${petugas}`;
+      if (result.error) {
+        if (result.error === 'QUOTA_EXHAUSTED') {
+          setAiError("Kuota AI Habis, mohon tunggu 1 menit.");
+        } else {
+          setAiError("Gangguan koneksi AI.");
+        }
+        setIsCalling(false);
+        return;
+      }
 
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = 'id-ID';
-    utterance.rate = 0.85; // Sedikit lebih lambat agar jelas
-    utterance.pitch = 1.0;
-
-    // Cari suara Indonesia (utamakan Laki-laki jika ada)
-    const voices = window.speechSynthesis.getVoices();
-    const idVoices = voices.filter(v => v.lang.startsWith('id'));
-    
-    // Coba cari suara yang mengandung kata "Male", "Laki", atau "Pria"
-    const maleVoice = idVoices.find(v => 
-      v.name.toLowerCase().includes('male') || 
-      v.name.toLowerCase().includes('pria') ||
-      v.name.toLowerCase().includes('laki')
-    );
-    
-    if (maleVoice) {
-      utterance.voice = maleVoice;
-    } else if (idVoices.length > 0) {
-      utterance.voice = idVoices[0]; // Gunakan suara Indonesia pertama yang tersedia
+      if (result.audioDataUri && audioRef.current) {
+        audioRef.current.src = result.audioDataUri;
+        audioRef.current.play().catch(e => console.error("Audio play error:", e));
+        
+        audioRef.current.onended = () => {
+          // Update timestamp agar tidak terpanggil ulang secara otomatis
+          setAnnouncedTimestamps(prev => ({
+            ...prev,
+            [participant.id]: participant.calledAt || new Date().toISOString()
+          }));
+          
+          // JEDA AMAN 5 DETIK untuk menjaga Quota AI
+          setTimeout(() => {
+            setIsCalling(false);
+          }, 5000);
+        };
+      }
+    } catch (error) {
+      console.error("AI Announcement Error:", error);
+      setIsCalling(false);
     }
-
-    utterance.onend = () => {
-      setAnnouncedTimestamps(prev => ({
-        ...prev,
-        [participant.id]: participant.calledAt || new Date().toISOString()
-      }));
-      setIsCalling(false);
-    };
-
-    utterance.onerror = () => {
-      setIsCalling(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
   };
 
   const handleLocalVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,14 +168,9 @@ export default function PublicDashboard() {
 
   const startMonitoring = () => {
     setIsStarted(true);
-    // Pemicu awal agar browser mengizinkan suara
-    if (window.speechSynthesis) {
-      const initUtterance = new SpeechSynthesisUtterance("");
-      window.speechSynthesis.speak(initUtterance);
-    }
     toast({
       title: "Monitoring Aktif",
-      description: "Panggilan antrian otomatis (Lokal TTS) telah diaktifkan.",
+      description: "Panggilan antrian otomatis (AI Premium) telah diaktifkan.",
     });
   };
 
@@ -213,7 +195,7 @@ export default function PublicDashboard() {
               <MonitorPlay className="w-24 h-24 text-primary animate-pulse" />
             </div>
             <h1 className="text-4xl font-black text-white font-headline tracking-tighter">DASHBOARD VIOLA</h1>
-            <p className="text-slate-400 font-medium">Klik tombol di bawah untuk mengaktifkan monitor dan suara panggilan lokal.</p>
+            <p className="text-slate-400 font-medium">Klik tombol di bawah untuk mengaktifkan monitor dan suara panggilan AI.</p>
           </div>
           <Button 
             onClick={startMonitoring}
@@ -230,15 +212,27 @@ export default function PublicDashboard() {
 
   return (
     <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden animate-in fade-in duration-700">
+      <audio ref={audioRef} className="hidden" />
+      
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
         <div className="flex items-center gap-6">
           <div className="space-y-1">
             <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
             <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.5em]">Virtual Office Layanan Peserta</p>
           </div>
-          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl border border-emerald-100">
-            <Volume2 className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-wider">TTS Lokal Aktif</span>
+          
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 bg-primary/5 text-primary px-4 py-2 rounded-2xl border border-primary/20">
+              <Sparkles className={`w-5 h-5 ${isCalling ? 'animate-spin' : ''}`} />
+              <span className="text-xs font-black uppercase tracking-wider">
+                {isCalling ? 'AI Sedang Memanggil...' : 'AI Premium Aktif'}
+              </span>
+            </div>
+            {aiError && (
+              <div className="flex items-center gap-1.5 text-[10px] font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full animate-bounce">
+                <AlertCircle className="w-3 h-3" /> {aiError}
+              </div>
+            )}
           </div>
         </div>
 
