@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Sparkles, Database, Cpu } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Cpu, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
@@ -17,6 +17,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 export default function PublicDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const processingRef = useRef(false); // Synchronous lock to prevent race conditions
   
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -25,10 +26,9 @@ export default function PublicDashboard() {
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   
-  // State untuk Kontrol Audio & Monitoring
   const [isStarted, setIsStarted] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
-  const [aiStatus, setAiStatus] = useState<'standby' | 'calling' | 'error' | 'cached'>('standby');
+  const [aiStatus, setAiStatus] = useState<'standby' | 'calling' | 'cached' | 'error'>('standby');
   const [aiError, setAiError] = useState<string | null>(null);
   
   const [announcedTimestamps, setAnnouncedTimestamps] = useState<Record<string, string>>({});
@@ -69,15 +69,17 @@ export default function PublicDashboard() {
     };
   }, [localVideoUrl]);
 
+  // Handle automatic announcements with robust locking
   useEffect(() => {
-    if (!isStarted || isCalling) return;
+    if (!isStarted || isCalling || processingRef.current) return;
 
     const toAnnounce = participants.find(p => {
       const isCalledStatus = (p.status === 'Called' || p.status === 'called');
       if (!isCalledStatus || !p.calledAt) return false;
 
       const lastKnownTime = announcedTimestamps[p.id];
-      return !lastKnownTime || p.calledAt > lastKnownTime;
+      // Trigger if not announced yet or if calledAt has changed (Recall)
+      return lastKnownTime !== p.calledAt;
     });
 
     if (toAnnounce) {
@@ -86,13 +88,15 @@ export default function PublicDashboard() {
   }, [participants, isStarted, announcedTimestamps, isCalling]);
 
   const handleAiAnnouncement = async (participant: Participant) => {
+    // Immediate synchronous lock
+    if (processingRef.current) return;
+    processingRef.current = true;
+    
     setIsCalling(true);
     setAiError(null);
 
     try {
-      // 1. CEK CACHE DI FIRESTORE TERLEBIH DAHULU
-      setAiStatus('standby');
-      const cacheKey = participant.queueNumber.replace('-', '_'); // Firebase ID safe
+      const cacheKey = participant.queueNumber.replace('-', '_');
       const cacheRef = doc(db, 'voice_cache', cacheKey);
       const cacheSnap = await getDoc(cacheRef);
 
@@ -102,25 +106,31 @@ export default function PublicDashboard() {
           console.log(`[VOICE CACHE] Menggunakan rekaman tersimpan untuk ${participant.queueNumber}`);
           setAiStatus('cached');
           audioRef.current.src = cachedData.audioDataUri;
+          
           await audioRef.current.play();
           
           audioRef.current.onended = () => {
+            // Mark as announced immediately
             setAnnouncedTimestamps(prev => ({
               ...prev,
-              [participant.id]: participant.calledAt || new Date().toISOString()
+              [participant.id]: participant.calledAt!
             }));
+            
+            // Wait 5 seconds cooldown to protect AI quota and give visual pause
             setTimeout(() => {
-              setIsCalling(false);
               setAiStatus('standby');
+              setIsCalling(false);
+              processingRef.current = false;
             }, 5000);
           };
           return;
         }
       }
 
-      // 2. JIKA TIDAK ADA DI CACHE, PANGGIL AI GEMINI
+      // No cache found, request from Gemini
       console.log(`[VOICE CACHE] Rekaman ${participant.queueNumber} tidak ditemukan. Meminta ke Gemini AI...`);
       setAiStatus('calling');
+      
       const result = await adminQueueCallAnnouncement({
         queueNumber: participant.queueNumber,
         participantName: participant.fullName
@@ -128,13 +138,17 @@ export default function PublicDashboard() {
 
       if (result.error) {
         setAiStatus('error');
-        setAiError(result.error === 'QUOTA_EXHAUSTED' ? "Limit AI Tercapai" : `Error: ${result.error}`);
-        setIsCalling(false);
+        setAiError(result.error === 'QUOTA_EXHAUSTED' ? "Limit AI Tercapai" : `Error AI`);
+        setTimeout(() => {
+          setAiStatus('standby');
+          setIsCalling(false);
+          processingRef.current = false;
+        }, 5000);
         return;
       }
 
       if (result.audioDataUri && audioRef.current) {
-        // 3. SIMPAN HASIL AI KE CACHE FIRESTORE UNTUK PENGGUNAAN BERIKUTNYA
+        // Save to cache for next time
         setDoc(cacheRef, {
           audioDataUri: result.audioDataUri,
           queueNumber: participant.queueNumber,
@@ -147,22 +161,30 @@ export default function PublicDashboard() {
         audioRef.current.onended = () => {
           setAnnouncedTimestamps(prev => ({
             ...prev,
-            [participant.id]: participant.calledAt || new Date().toISOString()
+            [participant.id]: participant.calledAt!
           }));
+          
           setTimeout(() => {
-            setIsCalling(false);
             setAiStatus('standby');
+            setIsCalling(false);
+            processingRef.current = false;
           }, 5000);
         };
       } else {
+        // Fallback if no audio URI returned
         setIsCalling(false);
+        processingRef.current = false;
         setAiStatus('standby');
       }
     } catch (error: any) {
       console.error("AI Announcement Error:", error);
       setAiStatus('error');
-      setAiError("Gangguan Koneksi AI");
-      setIsCalling(false);
+      setAiError("Koneksi Error");
+      setTimeout(() => {
+        setAiStatus('standby');
+        setIsCalling(false);
+        processingRef.current = false;
+      }, 5000);
     }
   };
 
@@ -265,22 +287,20 @@ export default function PublicDashboard() {
           </div>
           <div className="flex items-center justify-end gap-3 mt-2">
             <div className="flex items-center gap-2">
-              {aiStatus === 'error' ? (
-                <span className="text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-3 py-1 rounded-full animate-bounce">
-                  {aiError}
-                </span>
-              ) : (
-                <span className={cn(
-                  "text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-700",
-                  aiStatus === 'calling' || aiStatus === 'cached' ? "text-primary opacity-100" : "text-foreground/5"
-                )}>
-                  {aiStatus === 'calling' ? (
-                    <span className="flex items-center gap-1"><Cpu className="w-3 h-3 animate-spin" /> AI Generating...</span>
-                  ) : aiStatus === 'cached' ? (
-                    <span className="flex items-center gap-1"><Database className="w-3 h-3 text-emerald-500" /> Playing from Cache</span>
-                  ) : 'AI Standby'}
-                </span>
-              )}
+              <span className={cn(
+                "text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-700",
+                aiStatus === 'calling' ? "text-primary opacity-100" : 
+                aiStatus === 'cached' ? "text-emerald-500 opacity-100" :
+                aiStatus === 'error' ? "text-rose-500 opacity-100" : "text-foreground/5"
+              )}>
+                {aiStatus === 'calling' ? (
+                  <span className="flex items-center gap-1"><Cpu className="w-3 h-3 animate-spin" /> AI Generating...</span>
+                ) : aiStatus === 'cached' ? (
+                  <span className="flex items-center gap-1"><Database className="w-3 h-3" /> Playing from Cache</span>
+                ) : aiStatus === 'error' ? (
+                  <span className="flex items-center gap-1">{aiError}</span>
+                ) : 'AI Standby'}
+              </span>
               <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-2">
                 {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '...'}
               </div>
