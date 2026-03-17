@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -25,6 +26,7 @@ export default function PublicDashboard() {
   // State untuk Kontrol Audio & Monitoring
   const [isStarted, setIsStarted] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
+  const [aiStatus, setAiStatus] = useState<'standby' | 'calling' | 'error'>('standby');
   const [aiError, setAiError] = useState<string | null>(null);
   
   // Menyimpan timestamp terakhir yang berhasil dipanggil untuk setiap ID peserta
@@ -76,8 +78,7 @@ export default function PublicDashboard() {
       if (!isCalledStatus || !p.calledAt) return false;
 
       const lastKnownTime = announcedTimestamps[p.id];
-      // RECALL LOGIC: 
-      // Panggil jika belum pernah dipanggil ATAU jam panggil di DB (calledAt) lebih baru dari memori lokal
+      // RECALL LOGIC: Panggil jika timestamp baru lebih besar dari memori lokal
       return !lastKnownTime || p.calledAt > lastKnownTime;
     });
 
@@ -86,11 +87,9 @@ export default function PublicDashboard() {
     }
   }, [participants, isStarted, announcedTimestamps, isCalling]);
 
-  /**
-   * Menggunakan Gemini AI TTS
-   */
   const handleAiAnnouncement = async (participant: Participant) => {
     setIsCalling(true);
+    setAiStatus('calling');
     setAiError(null);
 
     try {
@@ -100,10 +99,11 @@ export default function PublicDashboard() {
       });
 
       if (result.error) {
+        setAiStatus('error');
         if (result.error === 'QUOTA_EXHAUSTED') {
-          setAiError("Kuota AI Habis");
+          setAiError("Limit AI Tercapai (Coba lagi dlm 1 mnt)");
         } else {
-          setAiError("AI Error");
+          setAiError(`Error: ${result.error}`);
         }
         setIsCalling(false);
         return;
@@ -111,25 +111,32 @@ export default function PublicDashboard() {
 
       if (result.audioDataUri && audioRef.current) {
         audioRef.current.src = result.audioDataUri;
-        audioRef.current.play().catch(e => console.error("Audio play error:", e));
+        audioRef.current.play().catch(e => {
+          console.error("Audio play error:", e);
+          setAiStatus('error');
+          setAiError("Gagal Memutar Audio");
+        });
         
         audioRef.current.onended = () => {
-          // Update timestamp agar tidak terpanggil ulang secara otomatis kecuali ada Recall (timestamp baru)
           setAnnouncedTimestamps(prev => ({
             ...prev,
             [participant.id]: participant.calledAt || new Date().toISOString()
           }));
           
-          // JEDA AMAN 5 DETIK untuk menjaga Quota AI (Cooldown)
+          // JEDA AMAN 5 DETIK untuk menjaga Quota AI
           setTimeout(() => {
             setIsCalling(false);
+            setAiStatus('standby');
           }, 5000);
         };
       } else {
         setIsCalling(false);
+        setAiStatus('standby');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Announcement Error:", error);
+      setAiStatus('error');
+      setAiError(error.message || "Gangguan Koneksi AI");
       setIsCalling(false);
     }
   };
@@ -234,16 +241,18 @@ export default function PublicDashboard() {
           <div className="flex items-center justify-end gap-3 mt-2">
             <div className="flex flex-col items-end">
               <span className={cn(
-                "text-[8px] font-black uppercase tracking-[0.3em] transition-all duration-700",
-                isCalling ? "text-primary animate-pulse opacity-100" : "text-foreground/[0.04]"
+                "text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-700",
+                aiStatus === 'calling' ? "text-primary animate-pulse opacity-100" : "text-foreground/10"
               )}>
-                {isCalling ? 'AI Memanggil' : 'AI Standby'}
+                {aiStatus === 'calling' ? 'AI Sedang Memanggil' : 'AI Standby'}
               </span>
               {aiError && (
-                <span className="text-[7px] font-black text-rose-500 uppercase tracking-tighter">{aiError}</span>
+                <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter bg-rose-50 px-2 py-0.5 rounded-full mt-1 animate-bounce">
+                  {aiError}
+                </span>
               )}
             </div>
-            <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+            <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-4">
               {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '...'}
             </div>
           </div>
