@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,18 +5,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Cpu, Database } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Cpu, Database, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 export default function PublicDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const processingRef = useRef(false); // Synchronous lock to prevent race conditions
+  const processingRef = useRef(false);
   
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -69,7 +69,6 @@ export default function PublicDashboard() {
     };
   }, [localVideoUrl]);
 
-  // Handle automatic announcements with robust locking
   useEffect(() => {
     if (!isStarted || isCalling || processingRef.current) return;
 
@@ -78,7 +77,6 @@ export default function PublicDashboard() {
       if (!isCalledStatus || !p.calledAt) return false;
 
       const lastKnownTime = announcedTimestamps[p.id];
-      // Trigger if not announced yet or if calledAt has changed (Recall)
       return lastKnownTime !== p.calledAt;
     });
 
@@ -88,7 +86,6 @@ export default function PublicDashboard() {
   }, [participants, isStarted, announcedTimestamps, isCalling]);
 
   const handleAiAnnouncement = async (participant: Participant) => {
-    // Immediate synchronous lock
     if (processingRef.current) return;
     processingRef.current = true;
     
@@ -96,39 +93,32 @@ export default function PublicDashboard() {
     setAiError(null);
 
     try {
-      const cacheKey = participant.queueNumber.replace('-', '_');
+      // Buat key unik berdasarkan Nomor & Nama agar cache akurat
+      const safeName = participant.fullName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      const cacheKey = `${participant.queueNumber.replace('-', '_')}_${safeName}`;
+      
       const cacheRef = doc(db, 'voice_cache', cacheKey);
       const cacheSnap = await getDoc(cacheRef);
 
+      // 1. Cek apakah sudah ada di Cache (Firestore Metadata + Storage URL)
       if (cacheSnap.exists()) {
         const cachedData = cacheSnap.data();
-        if (cachedData.audioDataUri && audioRef.current) {
-          console.log(`[VOICE CACHE] Menggunakan rekaman tersimpan untuk ${participant.queueNumber}`);
+        if (cachedData.audioUrl && audioRef.current) {
+          console.log(`[STORAGE CACHE] Memutar rekaman tersimpan untuk ${participant.queueNumber}`);
           setAiStatus('cached');
-          audioRef.current.src = cachedData.audioDataUri;
+          audioRef.current.src = cachedData.audioUrl;
           
           await audioRef.current.play();
           
           audioRef.current.onended = () => {
-            // Mark as announced immediately
-            setAnnouncedTimestamps(prev => ({
-              ...prev,
-              [participant.id]: participant.calledAt!
-            }));
-            
-            // Wait 5 seconds cooldown to protect AI quota and give visual pause
-            setTimeout(() => {
-              setAiStatus('standby');
-              setIsCalling(false);
-              processingRef.current = false;
-            }, 5000);
+            finishAnnouncement(participant);
           };
           return;
         }
       }
 
-      // No cache found, request from Gemini
-      console.log(`[VOICE CACHE] Rekaman ${participant.queueNumber} tidak ditemukan. Meminta ke Gemini AI...`);
+      // 2. Jika tidak ada di cache, minta ke Gemini AI
+      console.log(`[STORAGE CACHE] Meminta suara baru ke Gemini AI untuk ${participant.fullName}...`);
       setAiStatus('calling');
       
       const result = await adminQueueCallAnnouncement({
@@ -137,55 +127,67 @@ export default function PublicDashboard() {
       });
 
       if (result.error) {
-        setAiStatus('error');
-        setAiError(result.error === 'QUOTA_EXHAUSTED' ? "Limit AI Tercapai" : `Error AI`);
-        setTimeout(() => {
-          setAiStatus('standby');
-          setIsCalling(false);
-          processingRef.current = false;
-        }, 5000);
+        handleError(result.error);
         return;
       }
 
       if (result.audioDataUri && audioRef.current) {
-        // Save to cache for next time
-        setDoc(cacheRef, {
-          audioDataUri: result.audioDataUri,
-          queueNumber: participant.queueNumber,
-          createdAt: new Date().toISOString()
-        }).catch(e => console.error("Gagal menyimpan ke cache:", e));
+        // 3. Simpan ke Firebase Storage (Full Sentence)
+        const storageRef = ref(storage, `announcements/${cacheKey}.wav`);
+        await uploadString(storageRef, result.audioDataUri, 'data_url');
+        
+        // 4. Dapatkan link permanen dari Storage
+        const downloadUrl = await getDownloadURL(storageRef);
 
-        audioRef.current.src = result.audioDataUri;
+        // 5. Catat link di Firestore voice_cache
+        await setDoc(cacheRef, {
+          audioUrl: downloadUrl,
+          queueNumber: participant.queueNumber,
+          fullName: participant.fullName,
+          createdAt: new Date().toISOString()
+        });
+
+        audioRef.current.src = downloadUrl;
         await audioRef.current.play();
         
         audioRef.current.onended = () => {
-          setAnnouncedTimestamps(prev => ({
-            ...prev,
-            [participant.id]: participant.calledAt!
-          }));
-          
-          setTimeout(() => {
-            setAiStatus('standby');
-            setIsCalling(false);
-            processingRef.current = false;
-          }, 5000);
+          finishAnnouncement(participant);
         };
       } else {
-        // Fallback if no audio URI returned
-        setIsCalling(false);
-        processingRef.current = false;
-        setAiStatus('standby');
+        resetLock();
       }
     } catch (error: any) {
       console.error("AI Announcement Error:", error);
-      setAiStatus('error');
-      setAiError("Koneksi Error");
-      setTimeout(() => {
-        setAiStatus('standby');
-        setIsCalling(false);
-        processingRef.current = false;
-      }, 5000);
+      handleError("Koneksi Error");
     }
+  };
+
+  const finishAnnouncement = (participant: Participant) => {
+    setAnnouncedTimestamps(prev => ({
+      ...prev,
+      [participant.id]: participant.calledAt!
+    }));
+    
+    // Jeda 5 detik untuk keamanan kuota dan kenyamanan telinga
+    setTimeout(() => {
+      setAiStatus('standby');
+      setIsCalling(false);
+      processingRef.current = false;
+    }, 5000);
+  };
+
+  const handleError = (errorMsg: string) => {
+    setAiStatus('error');
+    setAiError(errorMsg === 'QUOTA_EXHAUSTED' ? "Limit AI Tercapai" : `Error AI`);
+    setTimeout(() => {
+      resetLock();
+    }, 5000);
+  };
+
+  const resetLock = () => {
+    setAiStatus('standby');
+    setIsCalling(false);
+    processingRef.current = false;
   };
 
   const handleLocalVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -296,7 +298,7 @@ export default function PublicDashboard() {
                 {aiStatus === 'calling' ? (
                   <span className="flex items-center gap-1"><Cpu className="w-3 h-3 animate-spin" /> AI Generating...</span>
                 ) : aiStatus === 'cached' ? (
-                  <span className="flex items-center gap-1"><Database className="w-3 h-3" /> Playing from Cache</span>
+                  <span className="flex items-center gap-1"><Cloud className="w-3 h-3" /> Playing from Storage Cache</span>
                 ) : aiStatus === 'error' ? (
                   <span className="flex items-center gap-1">{aiError}</span>
                 ) : 'AI Standby'}
