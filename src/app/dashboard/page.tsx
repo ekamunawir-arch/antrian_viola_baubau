@@ -6,11 +6,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Sparkles } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Sparkles, Database, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function PublicDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,10 +28,9 @@ export default function PublicDashboard() {
   // State untuk Kontrol Audio & Monitoring
   const [isStarted, setIsStarted] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
-  const [aiStatus, setAiStatus] = useState<'standby' | 'calling' | 'error'>('standby');
+  const [aiStatus, setAiStatus] = useState<'standby' | 'calling' | 'error' | 'cached'>('standby');
   const [aiError, setAiError] = useState<string | null>(null);
   
-  // Menyimpan timestamp terakhir yang berhasil dipanggil untuk setiap ID peserta
   const [announcedTimestamps, setAnnouncedTimestamps] = useState<Record<string, string>>({});
 
   const fetchData = () => {
@@ -68,17 +69,14 @@ export default function PublicDashboard() {
     };
   }, [localVideoUrl]);
 
-  // Efek Listener untuk Panggilan Suara Otomatis via AI
   useEffect(() => {
     if (!isStarted || isCalling) return;
 
-    // Cari peserta yang statusnya 'Called'
     const toAnnounce = participants.find(p => {
       const isCalledStatus = (p.status === 'Called' || p.status === 'called');
       if (!isCalledStatus || !p.calledAt) return false;
 
       const lastKnownTime = announcedTimestamps[p.id];
-      // RECALL LOGIC: Panggil jika timestamp baru lebih besar dari memori lokal
       return !lastKnownTime || p.calledAt > lastKnownTime;
     });
 
@@ -89,10 +87,40 @@ export default function PublicDashboard() {
 
   const handleAiAnnouncement = async (participant: Participant) => {
     setIsCalling(true);
-    setAiStatus('calling');
     setAiError(null);
 
     try {
+      // 1. CEK CACHE DI FIRESTORE TERLEBIH DAHULU
+      setAiStatus('standby');
+      const cacheKey = participant.queueNumber.replace('-', '_'); // Firebase ID safe
+      const cacheRef = doc(db, 'voice_cache', cacheKey);
+      const cacheSnap = await getDoc(cacheRef);
+
+      if (cacheSnap.exists()) {
+        const cachedData = cacheSnap.data();
+        if (cachedData.audioDataUri && audioRef.current) {
+          console.log(`[VOICE CACHE] Menggunakan rekaman tersimpan untuk ${participant.queueNumber}`);
+          setAiStatus('cached');
+          audioRef.current.src = cachedData.audioDataUri;
+          await audioRef.current.play();
+          
+          audioRef.current.onended = () => {
+            setAnnouncedTimestamps(prev => ({
+              ...prev,
+              [participant.id]: participant.calledAt || new Date().toISOString()
+            }));
+            setTimeout(() => {
+              setIsCalling(false);
+              setAiStatus('standby');
+            }, 5000);
+          };
+          return;
+        }
+      }
+
+      // 2. JIKA TIDAK ADA DI CACHE, PANGGIL AI GEMINI
+      console.log(`[VOICE CACHE] Rekaman ${participant.queueNumber} tidak ditemukan. Meminta ke Gemini AI...`);
+      setAiStatus('calling');
       const result = await adminQueueCallAnnouncement({
         queueNumber: participant.queueNumber,
         participantName: participant.fullName
@@ -100,30 +128,27 @@ export default function PublicDashboard() {
 
       if (result.error) {
         setAiStatus('error');
-        if (result.error === 'QUOTA_EXHAUSTED') {
-          setAiError("Limit AI Tercapai (Coba lagi dlm 1 mnt)");
-        } else {
-          setAiError(`Error: ${result.error}`);
-        }
+        setAiError(result.error === 'QUOTA_EXHAUSTED' ? "Limit AI Tercapai" : `Error: ${result.error}`);
         setIsCalling(false);
         return;
       }
 
       if (result.audioDataUri && audioRef.current) {
+        // 3. SIMPAN HASIL AI KE CACHE FIRESTORE UNTUK PENGGUNAAN BERIKUTNYA
+        setDoc(cacheRef, {
+          audioDataUri: result.audioDataUri,
+          queueNumber: participant.queueNumber,
+          createdAt: new Date().toISOString()
+        }).catch(e => console.error("Gagal menyimpan ke cache:", e));
+
         audioRef.current.src = result.audioDataUri;
-        audioRef.current.play().catch(e => {
-          console.error("Audio play error:", e);
-          setAiStatus('error');
-          setAiError("Gagal Memutar Audio");
-        });
+        await audioRef.current.play();
         
         audioRef.current.onended = () => {
           setAnnouncedTimestamps(prev => ({
             ...prev,
             [participant.id]: participant.calledAt || new Date().toISOString()
           }));
-          
-          // JEDA AMAN 5 DETIK untuk menjaga Quota AI
           setTimeout(() => {
             setIsCalling(false);
             setAiStatus('standby');
@@ -136,7 +161,7 @@ export default function PublicDashboard() {
     } catch (error: any) {
       console.error("AI Announcement Error:", error);
       setAiStatus('error');
-      setAiError(error.message || "Gangguan Koneksi AI");
+      setAiError("Gangguan Koneksi AI");
       setIsCalling(false);
     }
   };
@@ -153,21 +178,21 @@ export default function PublicDashboard() {
     }
   };
 
-  const parseDate = (val: any): Date | null => {
-    if (!val) return null;
-    if (val instanceof Date) return val;
-    if (typeof val === 'object') {
-      if (val.seconds !== undefined) return new Date(val.seconds * 1000);
-      if (val._seconds !== undefined) return new Date(val._seconds * 1000);
-    }
-    if (typeof val === 'string' && val.trim() !== '') {
-      const d = new Date(val);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  };
-
   const calculateDuration = (startTime: any, endTime: any) => {
+    const parseDate = (val: any): Date | null => {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      if (typeof val === 'object') {
+        if (val.seconds !== undefined) return new Date(val.seconds * 1000);
+        if (val._seconds !== undefined) return new Date(val._seconds * 1000);
+      }
+      if (typeof val === 'string' && val.trim() !== '') {
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      return null;
+    };
+
     const start = parseDate(startTime);
     const end = (endTime === null || endTime === undefined) ? currentTime : parseDate(endTime);
     if (!start || !end) return '00:00:00';
@@ -239,21 +264,26 @@ export default function PublicDashboard() {
             {currentTime ? currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
           </div>
           <div className="flex items-center justify-end gap-3 mt-2">
-            <div className="flex flex-col items-end">
-              <span className={cn(
-                "text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-700",
-                aiStatus === 'calling' ? "text-primary animate-pulse opacity-100" : "text-foreground/10"
-              )}>
-                {aiStatus === 'calling' ? 'AI Sedang Memanggil' : 'AI Standby'}
-              </span>
-              {aiError && (
-                <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter bg-rose-50 px-2 py-0.5 rounded-full mt-1 animate-bounce">
+            <div className="flex items-center gap-2">
+              {aiStatus === 'error' ? (
+                <span className="text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-3 py-1 rounded-full animate-bounce">
                   {aiError}
                 </span>
+              ) : (
+                <span className={cn(
+                  "text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-700",
+                  aiStatus === 'calling' || aiStatus === 'cached' ? "text-primary opacity-100" : "text-foreground/5"
+                )}>
+                  {aiStatus === 'calling' ? (
+                    <span className="flex items-center gap-1"><Cpu className="w-3 h-3 animate-spin" /> AI Generating...</span>
+                  ) : aiStatus === 'cached' ? (
+                    <span className="flex items-center gap-1"><Database className="w-3 h-3 text-emerald-500" /> Playing from Cache</span>
+                  ) : 'AI Standby'}
+                </span>
               )}
-            </div>
-            <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-4">
-              {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '...'}
+              <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-2">
+                {currentTime ? currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '...'}
+              </div>
             </div>
           </div>
         </div>
@@ -293,21 +323,9 @@ export default function PublicDashboard() {
               )}
 
               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <input 
-                  type="file" 
-                  accept="video/*" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  onChange={handleLocalVideoSelect}
-                />
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  className="rounded-full bg-black/50 hover:bg-black/80 text-white border-none backdrop-blur-md"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <FileVideo className="w-4 h-4 mr-2" />
-                  Pilih Video Lokal
+                <input type="file" accept="video/*" ref={fileInputRef} className="hidden" onChange={handleLocalVideoSelect} />
+                <Button variant="secondary" size="sm" className="rounded-full bg-black/50 hover:bg-black/80 text-white border-none backdrop-blur-md" onClick={() => fileInputRef.current?.click()}>
+                  <FileVideo className="w-4 h-4 mr-2" /> Pilih Video Lokal
                 </Button>
               </div>
             </CardContent>
@@ -343,7 +361,7 @@ export default function PublicDashboard() {
             <CardContent className="p-4 space-y-4 overflow-hidden">
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
-                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg relative overflow-hidden group">
+                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg relative overflow-hidden">
                     {(p.status === 'Called' || p.status === 'called') && isCalling && (
                       <div className="absolute inset-0 bg-primary/20 animate-pulse pointer-events-none" />
                     )}
@@ -353,17 +371,11 @@ export default function PublicDashboard() {
                     <div className="flex-1 overflow-hidden z-10">
                       <div className="flex justify-between items-center mb-1">
                         <p className="text-lg font-bold truncate leading-none">{p.fullName}</p>
-                        <Badge className="bg-white/20 text-white text-[10px] font-black uppercase border-none">
-                          {p.serviceType.split(' ')[0]}
-                        </Badge>
+                        <Badge className="bg-white/20 text-white text-[10px] font-black uppercase border-none">{p.serviceType.split(' ')[0]}</Badge>
                       </div>
                       <div className="flex items-center justify-between text-xs font-black">
-                        <span className="flex items-center gap-1 opacity-80 truncate max-w-[120px]">
-                          <User className="w-4 h-4" /> {p.servedBy || p.staffName || 'Petugas'}
-                        </span>
-                        <span className="text-sky-300">
-                          <Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, null)}
-                        </span>
+                        <span className="flex items-center gap-1 opacity-80 truncate max-w-[120px]"><User className="w-4 h-4" /> {p.servedBy || p.staffName || 'Petugas'}</span>
+                        <span className="text-sky-300"><Clock className="w-4 h-4 inline mr-1" /> {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, null)}</span>
                       </div>
                     </div>
                   </div>
@@ -392,17 +404,13 @@ export default function PublicDashboard() {
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-start">
                         <p className="text-base font-bold truncate leading-none">{p.fullName}</p>
-                        <span className="text-xs font-black text-emerald-600">
-                           {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.finishedAt || p.finishAt || p.serveEndTime)}
-                        </span>
+                        <span className="text-xs font-black text-emerald-600">{calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.finishedAt || p.finishAt || p.serveEndTime)}</span>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12 text-muted-foreground font-bold text-xs opacity-30 uppercase tracking-[0.3em]">
-                  Belum Ada Data
-                </div>
+                <div className="text-center py-12 text-muted-foreground font-bold text-xs opacity-30 uppercase tracking-[0.3em]">Belum Ada Data</div>
               )}
             </CardContent>
           </Card>
