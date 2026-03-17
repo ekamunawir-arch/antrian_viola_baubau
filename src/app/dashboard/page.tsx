@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, VolumeX } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, VolumeX, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 import { toast } from '@/hooks/use-toast';
@@ -21,8 +21,8 @@ export default function PublicDashboard() {
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   
-  // State untuk Audio Panggilan
-  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  // State untuk Kontrol Audio & Monitoring
+  const [isStarted, setIsStarted] = useState(false);
   const [announcedIds, setAnnouncedIds] = useState<Set<string>>(new Set());
   const [isCalling, setIsCalling] = useState(false);
 
@@ -64,7 +64,7 @@ export default function PublicDashboard() {
 
   // Efek Listener untuk Panggilan Suara Otomatis
   useEffect(() => {
-    if (!isAudioEnabled || isCalling) return;
+    if (!isStarted || isCalling) return;
 
     // Cari peserta yang statusnya 'Called' atau 'called' dan belum diumumkan
     const toAnnounce = participants.find(p => 
@@ -74,7 +74,7 @@ export default function PublicDashboard() {
     if (toAnnounce) {
       handleAutoAnnouncement(toAnnounce);
     }
-  }, [participants, isAudioEnabled, announcedIds, isCalling]);
+  }, [participants, isStarted, announcedIds, isCalling]);
 
   const handleAutoAnnouncement = async (participant: Participant) => {
     setIsCalling(true);
@@ -97,7 +97,6 @@ export default function PublicDashboard() {
         
         await audioRef.current.play();
         
-        // Tunggu audio selesai (asumsi rata-rata 5-7 detik) sebelum memproses antrian suara berikutnya
         audioRef.current.onended = () => {
           setIsCalling(false);
         };
@@ -148,14 +147,19 @@ export default function PublicDashboard() {
     return [hours, minutes, seconds].map(v => v.toString().padStart(2, '0')).join(':');
   };
 
-  const toggleAudio = () => {
-    setIsAudioEnabled(!isAudioEnabled);
-    if (!isAudioEnabled) {
-      toast({
-        title: "Audio Diaktifkan",
-        description: "Dashboard sekarang akan memanggil antrian secara otomatis.",
-      });
+  const startMonitoring = () => {
+    setIsStarted(true);
+    // Dummy audio play to unlock audio context on some browsers
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
     }
+    audioRef.current.play().catch(() => {
+      // Ignore initial play error, context is now authorized
+    });
+    toast({
+      title: "Monitoring Aktif",
+      description: "Suara panggilan antrian otomatis telah diaktifkan.",
+    });
   };
 
   const beingServedList = participants.filter(p => 
@@ -170,8 +174,33 @@ export default function PublicDashboard() {
 
   if (!mounted) return <div className="min-h-screen bg-background" />;
 
+  // Layar Start Overlay jika belum diklik
+  if (!isStarted) {
+    return (
+      <div className="h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
+          <div className="space-y-4">
+            <div className="bg-primary/20 p-8 rounded-[3rem] w-fit mx-auto mb-6">
+              <MonitorPlay className="w-24 h-24 text-primary animate-pulse" />
+            </div>
+            <h1 className="text-4xl font-black text-white font-headline tracking-tighter">DASHBOARD VIOLA</h1>
+            <p className="text-slate-400 font-medium">Klik tombol di bawah untuk mengaktifkan monitor dan suara panggilan otomatis.</p>
+          </div>
+          <Button 
+            onClick={startMonitoring}
+            className="w-full h-20 text-2xl font-black bg-primary hover:bg-primary/90 rounded-[2rem] shadow-[0_0_50px_rgba(18,169,194,0.3)] transition-all hover:scale-105 active:scale-95 flex gap-4"
+          >
+            <Play className="fill-current w-8 h-8" />
+            MULAI MONITORING
+          </Button>
+          <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-bold">Virtual Office Layanan Peserta</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden">
+    <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden animate-in fade-in duration-700">
       {/* Header Dashboard */}
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
         <div className="flex items-center gap-6">
@@ -180,18 +209,11 @@ export default function PublicDashboard() {
             <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.5em]">Virtual Office Layanan Peserta</p>
           </div>
           
-          {/* Audio Status Toggle */}
-          <Button 
-            variant={isAudioEnabled ? "default" : "destructive"} 
-            className="rounded-2xl h-14 px-6 flex gap-3 shadow-lg transition-all animate-in fade-in zoom-in"
-            onClick={toggleAudio}
-          >
-            {isAudioEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-            <div className="text-left">
-              <p className="text-[10px] font-black uppercase leading-tight">{isAudioEnabled ? 'Audio Aktif' : 'Audio Mati'}</p>
-              <p className="text-xs font-bold leading-tight">{isAudioEnabled ? 'Panggilan Otomatis' : 'Klik Aktifkan Suara'}</p>
-            </div>
-          </Button>
+          {/* Status Indikator Suara */}
+          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl border border-emerald-100">
+            <Volume2 className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-wider">Audio Aktif</span>
+          </div>
         </div>
 
         <div className="text-right">
