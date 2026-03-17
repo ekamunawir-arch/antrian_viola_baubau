@@ -7,12 +7,10 @@ import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
 import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 import { toast } from '@/hooks/use-toast';
 
 export default function PublicDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -63,65 +61,85 @@ export default function PublicDashboard() {
     };
   }, [localVideoUrl]);
 
-  // Efek Listener untuk Panggilan Suara Otomatis (Termasuk Recall)
+  // Efek Listener untuk Panggilan Suara Otomatis Lokal
   useEffect(() => {
     if (!isStarted || isCalling) return;
 
-    // Cari peserta yang statusnya 'Called' dan timestamp calledAt lebih baru dari yang pernah dipanggil
     const toAnnounce = participants.find(p => {
       const isCalledStatus = (p.status === 'Called' || p.status === 'called');
       if (!isCalledStatus || !p.calledAt) return false;
 
       const lastKnownTime = announcedTimestamps[p.id];
-      // Jika belum pernah dipanggil ATAU timestamp di Firestore lebih baru (RECALL)
       return !lastKnownTime || p.calledAt > lastKnownTime;
     });
 
     if (toAnnounce) {
-      handleAutoAnnouncement(toAnnounce);
+      handleLocalAnnouncement(toAnnounce);
     }
   }, [participants, isStarted, announcedTimestamps, isCalling]);
 
-  const handleAutoAnnouncement = async (participant: Participant) => {
-    setIsCalling(true);
-    try {
-      console.log(`[AUDIO] Memanggil: ${participant.queueNumber} (Timestamp: ${participant.calledAt})`);
-      
-      const result = await adminQueueCallAnnouncement({
-        queueNumber: participant.queueNumber,
-        participantName: participant.fullName
-      });
-
-      if (result.audioDataUri) {
-        if (!audioRef.current) {
-          audioRef.current = new Audio();
-        }
-        audioRef.current.src = result.audioDataUri;
-        
-        // Simpan timestamp panggilan ini agar tidak terjadi loop
-        setAnnouncedTimestamps(prev => ({
-          ...prev,
-          [participant.id]: participant.calledAt || new Date().toISOString()
-        }));
-        
-        await audioRef.current.play();
-        
-        audioRef.current.onended = async () => {
-          console.log("[AUDIO] Selesai. Menunggu jeda 5 detik untuk menjaga kuota AI...");
-          // Jeda 5 detik sebelum mengizinkan panggilan berikutnya
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          setIsCalling(false);
-        };
-      } else {
-        console.error("[AUDIO] Gagal mendapatkan data audio:", result.error);
-        // Tetap beri jeda meskipun gagal agar tidak membombardir API
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        setIsCalling(false);
-      }
-    } catch (error) {
-      console.error("[AUDIO] Error saat memanggil antrian:", error);
-      setIsCalling(false);
+  /**
+   * Mengucapkan teks menggunakan Web Speech API (TTS Lokal)
+   */
+  const handleLocalAnnouncement = (participant: Participant) => {
+    if (!window.speechSynthesis) {
+      console.error("Browser ini tidak mendukung Web Speech API");
+      return;
     }
+
+    setIsCalling(true);
+
+    // Format nomor antrian agar dieja (misal A-01 -> A, kosong, satu)
+    const formatNumberForSpeech = (num: string) => {
+      return num
+        .replace('-', ' ')
+        .split('')
+        .map(char => {
+          if (char === '0') return 'kosong';
+          return char;
+        })
+        .join(' ');
+    };
+
+    const nomorEjaan = formatNumberForSpeech(participant.queueNumber);
+    const petugas = participant.servedBy || participant.staffName || "Petugas Layanan";
+    const textToSpeak = `Nomor antrean. ${nomorEjaan}. silakan menuju. ${petugas}`;
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.85; // Sedikit lebih lambat agar jelas
+    utterance.pitch = 1.0;
+
+    // Cari suara Indonesia (utamakan Laki-laki jika ada)
+    const voices = window.speechSynthesis.getVoices();
+    const idVoices = voices.filter(v => v.lang.startsWith('id'));
+    
+    // Coba cari suara yang mengandung kata "Male", "Laki", atau "Pria"
+    const maleVoice = idVoices.find(v => 
+      v.name.toLowerCase().includes('male') || 
+      v.name.toLowerCase().includes('pria') ||
+      v.name.toLowerCase().includes('laki')
+    );
+    
+    if (maleVoice) {
+      utterance.voice = maleVoice;
+    } else if (idVoices.length > 0) {
+      utterance.voice = idVoices[0]; // Gunakan suara Indonesia pertama yang tersedia
+    }
+
+    utterance.onend = () => {
+      setAnnouncedTimestamps(prev => ({
+        ...prev,
+        [participant.id]: participant.calledAt || new Date().toISOString()
+      }));
+      setIsCalling(false);
+    };
+
+    utterance.onerror = () => {
+      setIsCalling(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleLocalVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,13 +181,14 @@ export default function PublicDashboard() {
 
   const startMonitoring = () => {
     setIsStarted(true);
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
+    // Pemicu awal agar browser mengizinkan suara
+    if (window.speechSynthesis) {
+      const initUtterance = new SpeechSynthesisUtterance("");
+      window.speechSynthesis.speak(initUtterance);
     }
-    audioRef.current.play().catch(() => {});
     toast({
       title: "Monitoring Aktif",
-      description: "Suara panggilan antrian otomatis telah diaktifkan.",
+      description: "Panggilan antrian otomatis (Lokal TTS) telah diaktifkan.",
     });
   };
 
@@ -194,7 +213,7 @@ export default function PublicDashboard() {
               <MonitorPlay className="w-24 h-24 text-primary animate-pulse" />
             </div>
             <h1 className="text-4xl font-black text-white font-headline tracking-tighter">DASHBOARD VIOLA</h1>
-            <p className="text-slate-400 font-medium">Klik tombol di bawah untuk mengaktifkan monitor dan suara panggilan otomatis.</p>
+            <p className="text-slate-400 font-medium">Klik tombol di bawah untuk mengaktifkan monitor dan suara panggilan lokal.</p>
           </div>
           <Button 
             onClick={startMonitoring}
@@ -219,7 +238,7 @@ export default function PublicDashboard() {
           </div>
           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl border border-emerald-100">
             <Volume2 className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-wider">Audio Aktif</span>
+            <span className="text-xs font-black uppercase tracking-wider">TTS Lokal Aktif</span>
           </div>
         </div>
 
@@ -318,7 +337,7 @@ export default function PublicDashboard() {
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg relative overflow-hidden group">
-                    {((p.status === 'Called' || p.status === 'called') && isCalling) && (
+                    {(p.status === 'Called' || p.status === 'called') && isCalling && (
                       <div className="absolute inset-0 bg-primary/20 animate-pulse pointer-events-none" />
                     )}
                     <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center border border-white/20 shrink-0 z-10">
