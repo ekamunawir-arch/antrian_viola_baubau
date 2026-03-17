@@ -93,18 +93,18 @@ export default function PublicDashboard() {
     setAiError(null);
 
     try {
-      // Buat key unik berdasarkan Nomor & Nama agar cache akurat
-      const safeName = participant.fullName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      const cacheKey = `${participant.queueNumber.replace('-', '_')}_${safeName}`;
+      // Menggunakan Nomor Antrian sebagai kunci cache utama (tanpa Nama)
+      // Agar suara nomor yang sama bisa digunakan berulang kali
+      const cacheKey = participant.queueNumber.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
       
       const cacheRef = doc(db, 'voice_cache', cacheKey);
       const cacheSnap = await getDoc(cacheRef);
 
-      // 1. Cek apakah sudah ada di Cache (Firestore Metadata + Storage URL)
+      // 1. Cek apakah suara untuk Nomor Antrian ini sudah ada di Storage/Cache
       if (cacheSnap.exists()) {
         const cachedData = cacheSnap.data();
         if (cachedData.audioUrl && audioRef.current) {
-          console.log(`[STORAGE CACHE] Memutar rekaman tersimpan untuk ${participant.queueNumber}`);
+          console.log(`[STORAGE CACHE] Memutar rekaman tersimpan untuk nomor ${participant.queueNumber}`);
           setAiStatus('cached');
           audioRef.current.src = cachedData.audioUrl;
           
@@ -117,13 +117,12 @@ export default function PublicDashboard() {
         }
       }
 
-      // 2. Jika tidak ada di cache, minta ke Gemini AI
-      console.log(`[STORAGE CACHE] Meminta suara baru ke Gemini AI untuk ${participant.fullName}...`);
+      // 2. Jika tidak ada di cache, minta ke Gemini AI (Hanya per nomor antrian)
+      console.log(`[STORAGE CACHE] Meminta suara baru ke Gemini AI untuk nomor ${participant.queueNumber}...`);
       setAiStatus('calling');
       
       const result = await adminQueueCallAnnouncement({
-        queueNumber: participant.queueNumber,
-        participantName: participant.fullName
+        queueNumber: participant.queueNumber
       });
 
       if (result.error) {
@@ -132,18 +131,17 @@ export default function PublicDashboard() {
       }
 
       if (result.audioDataUri && audioRef.current) {
-        // 3. Simpan ke Firebase Storage (Full Sentence)
+        // 3. Simpan ke Firebase Storage
         const storageRef = ref(storage, `announcements/${cacheKey}.wav`);
         await uploadString(storageRef, result.audioDataUri, 'data_url');
         
         // 4. Dapatkan link permanen dari Storage
         const downloadUrl = await getDownloadURL(storageRef);
 
-        // 5. Catat link di Firestore voice_cache
+        // 5. Catat link di Firestore voice_cache agar bisa digunakan peserta lain dengan nomor sama
         await setDoc(cacheRef, {
           audioUrl: downloadUrl,
           queueNumber: participant.queueNumber,
-          fullName: participant.fullName,
           createdAt: new Date().toISOString()
         });
 

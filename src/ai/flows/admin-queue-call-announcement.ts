@@ -14,7 +14,6 @@ import wav from 'wav';
 
 const AdminQueueCallAnnouncementInputSchema = z.object({
   queueNumber: z.string().describe('The queue number to be announced (e.g., A01).'),
-  participantName: z.string().describe('The name of the participant to be announced.'),
 });
 export type AdminQueueCallAnnouncementInput = z.infer<typeof AdminQueueCallAnnouncementInputSchema>;
 
@@ -68,7 +67,8 @@ const adminQueueCallAnnouncementFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const promptText = `Antrian selanjutnya Nomor ${input.queueNumber} atas nama ${input.participantName}`;
+      // Teks pengumuman disederhanakan agar bisa di-cache per nomor antrian
+      const promptText = `Antrian selanjutnya Nomor ${input.queueNumber}`;
 
       const { media } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-preview-tts'),
