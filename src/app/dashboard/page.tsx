@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, VolumeX, Play } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Volume2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
 import { toast } from '@/hooks/use-toast';
@@ -23,8 +23,9 @@ export default function PublicDashboard() {
   
   // State untuk Kontrol Audio & Monitoring
   const [isStarted, setIsStarted] = useState(false);
-  const [announcedIds, setAnnouncedIds] = useState<Set<string>>(new Set());
   const [isCalling, setIsCalling] = useState(false);
+  // Menyimpan timestamp terakhir yang berhasil dipanggil untuk setiap ID peserta
+  const [announcedTimestamps, setAnnouncedTimestamps] = useState<Record<string, string>>({});
 
   const fetchData = () => {
     try {
@@ -62,24 +63,29 @@ export default function PublicDashboard() {
     };
   }, [localVideoUrl]);
 
-  // Efek Listener untuk Panggilan Suara Otomatis
+  // Efek Listener untuk Panggilan Suara Otomatis (Termasuk Recall)
   useEffect(() => {
     if (!isStarted || isCalling) return;
 
-    // Cari peserta yang statusnya 'Called' atau 'called' dan belum diumumkan
-    const toAnnounce = participants.find(p => 
-      (p.status === 'Called' || p.status === 'called') && !announcedIds.has(p.id)
-    );
+    // Cari peserta yang statusnya 'Called' dan timestamp calledAt lebih baru dari yang pernah dipanggil
+    const toAnnounce = participants.find(p => {
+      const isCalledStatus = (p.status === 'Called' || p.status === 'called');
+      if (!isCalledStatus || !p.calledAt) return false;
+
+      const lastKnownTime = announcedTimestamps[p.id];
+      // Jika belum pernah dipanggil ATAU timestamp di Firestore lebih baru (RECALL)
+      return !lastKnownTime || p.calledAt > lastKnownTime;
+    });
 
     if (toAnnounce) {
       handleAutoAnnouncement(toAnnounce);
     }
-  }, [participants, isStarted, announcedIds, isCalling]);
+  }, [participants, isStarted, announcedTimestamps, isCalling]);
 
   const handleAutoAnnouncement = async (participant: Participant) => {
     setIsCalling(true);
     try {
-      console.log(`[AUDIO] Memulai panggilan untuk: ${participant.queueNumber} - ${participant.fullName}`);
+      console.log(`[AUDIO] Memanggil: ${participant.queueNumber} (Timestamp: ${participant.calledAt})`);
       
       const result = await adminQueueCallAnnouncement({
         queueNumber: participant.queueNumber,
@@ -92,16 +98,24 @@ export default function PublicDashboard() {
         }
         audioRef.current.src = result.audioDataUri;
         
-        // Tambahkan ID ke set agar tidak dipanggil ulang
-        setAnnouncedIds(prev => new Set(prev).add(participant.id));
+        // Simpan timestamp panggilan ini agar tidak terjadi loop
+        setAnnouncedTimestamps(prev => ({
+          ...prev,
+          [participant.id]: participant.calledAt || new Date().toISOString()
+        }));
         
         await audioRef.current.play();
         
-        audioRef.current.onended = () => {
+        audioRef.current.onended = async () => {
+          console.log("[AUDIO] Selesai. Menunggu jeda 5 detik untuk menjaga kuota AI...");
+          // Jeda 5 detik sebelum mengizinkan panggilan berikutnya
+          await new Promise(resolve => setTimeout(resolve, 5000));
           setIsCalling(false);
         };
       } else {
         console.error("[AUDIO] Gagal mendapatkan data audio:", result.error);
+        // Tetap beri jeda meskipun gagal agar tidak membombardir API
+        await new Promise(resolve => setTimeout(resolve, 5000));
         setIsCalling(false);
       }
     } catch (error) {
@@ -149,13 +163,10 @@ export default function PublicDashboard() {
 
   const startMonitoring = () => {
     setIsStarted(true);
-    // Dummy audio play to unlock audio context on some browsers
     if (!audioRef.current) {
       audioRef.current = new Audio();
     }
-    audioRef.current.play().catch(() => {
-      // Ignore initial play error, context is now authorized
-    });
+    audioRef.current.play().catch(() => {});
     toast({
       title: "Monitoring Aktif",
       description: "Suara panggilan antrian otomatis telah diaktifkan.",
@@ -174,7 +185,6 @@ export default function PublicDashboard() {
 
   if (!mounted) return <div className="min-h-screen bg-background" />;
 
-  // Layar Start Overlay jika belum diklik
   if (!isStarted) {
     return (
       <div className="h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
@@ -201,15 +211,12 @@ export default function PublicDashboard() {
 
   return (
     <div className="h-screen bg-background p-6 md:p-10 flex flex-col gap-6 overflow-hidden animate-in fade-in duration-700">
-      {/* Header Dashboard */}
       <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-xl border-b-8 border-b-primary shrink-0">
         <div className="flex items-center gap-6">
           <div className="space-y-1">
             <h1 className="text-5xl font-black text-primary font-headline tracking-tighter leading-none">VIOLA</h1>
             <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.5em]">Virtual Office Layanan Peserta</p>
           </div>
-          
-          {/* Status Indikator Suara */}
           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl border border-emerald-100">
             <Volume2 className="w-5 h-5" />
             <span className="text-xs font-black uppercase tracking-wider">Audio Aktif</span>
@@ -227,7 +234,6 @@ export default function PublicDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
-        {/* Konten Kiri: Video & Informasi Berikutnya */}
         <div className="lg:col-span-8 flex flex-col gap-6 min-h-0">
           <Card className="flex-1 bg-black shadow-2xl border-none overflow-hidden relative group">
             <CardContent className="h-full p-0 flex items-center justify-center bg-slate-900 overflow-hidden relative">
@@ -250,7 +256,6 @@ export default function PublicDashboard() {
                     <>
                       <AlertCircle className="w-24 h-24 mb-4 text-rose-500/50" />
                       <p className="text-lg font-black uppercase text-rose-500/50">Video Tidak Dapat Diputar</p>
-                      <p className="text-xs mt-2 text-white/40">Silakan pilih file video lokal menggunakan tombol di bawah.</p>
                     </>
                   ) : (
                     <>
@@ -279,13 +284,6 @@ export default function PublicDashboard() {
                   Pilih Video Lokal
                 </Button>
               </div>
-
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-10 pointer-events-none">
-                <div className="flex items-center gap-4 text-white">
-                  <div className="w-4 h-4 bg-red-600 rounded-full animate-pulse" />
-                  <span className="text-sm font-black uppercase tracking-widest">Siaran Informasi & Edukasi</span>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
@@ -297,10 +295,7 @@ export default function PublicDashboard() {
               <div>
                 <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-1">Berikutnya</p>
                 {nextInQueue ? (
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-5xl font-black text-primary leading-none">{nextInQueue.queueNumber}</span>
-                    <span className="text-2xl font-bold text-slate-700 truncate max-w-[250px] leading-none">{nextInQueue.fullName}</span>
-                  </div>
+                  <span className="text-6xl font-black text-primary leading-none">{nextInQueue.queueNumber}</span>
                 ) : (
                   <span className="text-xl font-bold text-muted-foreground italic">Belum Ada Antrian</span>
                 )}
@@ -313,7 +308,6 @@ export default function PublicDashboard() {
           </div>
         </div>
 
-        {/* Konten Kanan: Sedang Dilayani & Antrian Selesai */}
         <div className="lg:col-span-4 flex flex-col gap-6 min-h-0">
           <Card className="bg-white shadow-xl border-t-8 border-t-primary overflow-hidden flex flex-col shrink-0">
             <div className="bg-primary/5 p-4 border-b flex items-center gap-3 shrink-0">
@@ -324,11 +318,9 @@ export default function PublicDashboard() {
               {beingServedList.length > 0 ? (
                 beingServedList.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#005a78] to-[#003d52] text-white rounded-2xl shadow-lg relative overflow-hidden group">
-                    {/* Indikator Animasi jika Sedang Dipanggil */}
-                    {(p.status === 'Called' || p.status === 'called') && (
+                    {((p.status === 'Called' || p.status === 'called') && isCalling) && (
                       <div className="absolute inset-0 bg-primary/20 animate-pulse pointer-events-none" />
                     )}
-                    
                     <div className="bg-white/10 text-white w-14 h-16 rounded-xl flex items-center justify-center border border-white/20 shrink-0 z-10">
                       <span className="text-xl font-black whitespace-nowrap px-1">{p.queueNumber}</span>
                     </div>
@@ -377,10 +369,6 @@ export default function PublicDashboard() {
                         <span className="text-xs font-black text-emerald-600">
                            {calculateDuration(p.calledAt || p.serveStartTime || p.timestamp, p.finishedAt || p.finishAt || p.serveEndTime)}
                         </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider truncate max-w-[150px]">{p.serviceType}</p>
-                        <p className="text-[9px] font-bold text-slate-400 italic">{p.servedBy || p.staffName}</p>
                       </div>
                     </div>
                   </div>
