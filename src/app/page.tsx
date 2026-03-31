@@ -200,73 +200,73 @@ export default function ParticipantIntake() {
         <div className="lg:col-span-7">
           {step === 'form' ? (
             <Card className="shadow-2xl border-none rounded-3xl overflow-hidden bg-white">
-              <CardHeader className="text-center pt-10 pb-6 space-y-4">
-                <CardTitle className="text-4xl font-black text-[#005a78] leading-tight">
+              <CardHeader className="text-center pt-8 md:pt-10 pb-4 md:pb-6 space-y-4">
+                <CardTitle className="text-3xl md:text-4xl font-black text-[#005a78] leading-tight">
                   Selamat Datang di <span className="text-primary">Layanan VIOLA</span>
                 </CardTitle>
                 <div className="space-y-4">
-                  <CardDescription className="text-base font-bold text-primary tracking-[0.3em] uppercase">
+                  <CardDescription className="text-sm md:text-base font-bold text-primary tracking-[0.3em] uppercase">
                     Sistem Antrian Online
                   </CardDescription>
                   
-                  <div className="bg-amber-100 border-2 border-amber-300 py-3 px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-md">
-                    <Ticket className="w-6 h-6 text-amber-600" />
+                  <div className="bg-amber-100 border-2 border-amber-300 py-3 px-4 md:px-6 rounded-2xl w-fit mx-auto flex items-center gap-3 shadow-md">
+                    <Ticket className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
                     <div className="text-left">
-                      <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Sisa Kuota Hari Ini</p>
-                      <p className="text-3xl font-black text-amber-700 leading-none">
+                      <p className="text-[9px] md:text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Sisa Kuota Hari Ini</p>
+                      <p className="text-2xl md:text-3xl font-black text-amber-700 leading-none">
                         {remainingQuota} <span className="text-xs font-bold text-amber-800 uppercase">Antrian</span>
                       </p>
                     </div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="px-8 pb-10">
+              <CardContent className="px-4 md:px-8 pb-8 md:pb-10">
                 {isClosed ? (
-                  <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-8 text-center space-y-6">
+                  <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 md:p-8 text-center space-y-6">
                     {isHoliday ? (
-                      <CalendarX className="w-16 h-16 text-rose-400 mx-auto" />
+                      <CalendarX className="w-12 h-12 md:w-16 md:h-16 text-rose-400 mx-auto" />
                     ) : (
-                      <Clock className="w-16 h-16 text-slate-400 mx-auto" />
+                      <Clock className="w-12 h-12 md:w-16 md:h-16 text-slate-400 mx-auto" />
                     )}
                     <div className="space-y-2">
-                      <h3 className="text-2xl font-black text-slate-700">
+                      <h3 className="text-xl md:text-2xl font-black text-slate-700">
                         {isHoliday ? 'Hari Ini Libur' : 'Layanan Sedang Tutup'}
                       </h3>
-                      <p className="text-slate-500 font-medium">
+                      <p className="text-sm md:text-base text-slate-500 font-medium">
                         {isHoliday 
                           ? 'Mohon maaf, pendaftaran antrian tidak tersedia karena hari ini merupakan hari libur/cuti bersama.' 
                           : 'Mohon maaf, pendaftaran antrian hanya tersedia pada jam operasional yang telah ditentukan.'}
                       </p>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 inline-block text-left shadow-sm space-y-4">
-                       <p className="text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Jadwal Operasional VIOLA:</p>
+                    <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 inline-block text-left shadow-sm space-y-4 w-full">
+                       <p className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-widest border-b pb-2">Jadwal Operasional VIOLA:</p>
                        <div className="space-y-3">
                           <div className="flex items-center gap-3">
-                             <CalendarDays className="w-5 h-5 text-primary shrink-0" />
-                             <p className="text-sm font-bold text-slate-700">Senin - Jumat (Kecuali Hari Libur)</p>
+                             <CalendarDays className="w-4 h-4 md:w-5 md:h-5 text-primary shrink-0" />
+                             <p className="text-xs md:text-sm font-bold text-slate-700">Senin - Jumat (Kecuali Hari Libur)</p>
                           </div>
                           <div className="flex items-center gap-3">
-                             <Clock className="w-5 h-5 text-primary shrink-0" />
+                             <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary shrink-0" />
                              <div>
-                               <p className="text-xs font-black text-primary uppercase tracking-tighter">Jam Pendaftaran:</p>
-                               <p className="text-sm font-bold text-slate-700">{settings?.startTime} - {settings?.endTime} WIB</p>
+                               <p className="text-[9px] md:text-xs font-black text-primary uppercase tracking-tighter">Jam Pendaftaran:</p>
+                               <p className="text-xs md:text-sm font-bold text-slate-700">{settings?.startTime} - {settings?.endTime} WIB</p>
                              </div>
                           </div>
                           <div className="flex items-center gap-3">
-                             <Video className="w-5 h-5 text-[#005a78] shrink-0" />
+                             <Video className="w-4 h-4 md:w-5 md:h-5 text-[#005a78] shrink-0" />
                              <div>
-                               <p className="text-xs font-black text-[#005a78] uppercase tracking-tighter">Jam Layanan Zoom:</p>
-                               <p className="text-sm font-bold text-slate-700">Mulai Pukul {settings?.serviceStartTime} WIB</p>
+                               <p className="text-[9px] md:text-xs font-black text-[#005a78] uppercase tracking-tighter">Jam Layanan Zoom:</p>
+                               <p className="text-xs md:text-sm font-bold text-slate-700">Mulai Pukul {settings?.serviceStartTime} WIB</p>
                              </div>
                           </div>
                        </div>
                     </div>
                   </div>
                 ) : isFull ? (
-                  <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-8 text-center space-y-4">
-                    <AlertCircle className="w-16 h-16 text-rose-500 mx-auto" />
-                    <h3 className="text-2xl font-black text-rose-700">Kuota Hari Ini Penuh</h3>
-                    <p className="text-rose-600 font-medium">Mohon maaf, silakan coba lagi besok hari atau hubungi petugas kami.</p>
+                  <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-6 md:p-8 text-center space-y-4">
+                    <AlertCircle className="w-12 h-12 md:w-16 md:h-16 text-rose-500 mx-auto" />
+                    <h3 className="text-xl md:text-2xl font-black text-rose-700">Kuota Hari Ini Penuh</h3>
+                    <p className="text-sm md:text-base text-rose-600 font-medium">Mohon maaf, silakan coba lagi besok hari atau hubungi petugas kami.</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -274,15 +274,15 @@ export default function ParticipantIntake() {
                       <div className="flex items-center gap-3">
                         <Clock className="w-5 h-5 text-primary" />
                         <div>
-                          <p className="text-[10px] font-black text-primary uppercase leading-tight">Sisa Waktu Pendaftaran</p>
-                          <p className="text-sm font-bold">Hingga pukul {settings?.endTime} WIB</p>
+                          <p className="text-[9px] md:text-[10px] font-black text-primary uppercase leading-tight">Sisa Waktu Pendaftaran</p>
+                          <p className="text-xs md:text-sm font-bold">Hingga pukul {settings?.endTime} WIB</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <Video className="w-5 h-5 text-[#005a78]" />
                         <div>
-                          <p className="text-[10px] font-black text-[#005a78] uppercase leading-tight">Mulai Layanan Zoom</p>
-                          <p className="text-sm font-bold">Pukul {settings?.serviceStartTime} WIB</p>
+                          <p className="text-[9px] md:text-[10px] font-black text-[#005a78] uppercase leading-tight">Mulai Layanan Zoom</p>
+                          <p className="text-xs md:text-sm font-bold">Pukul {settings?.serviceStartTime} WIB</p>
                         </div>
                       </div>
                     </div>
@@ -294,9 +294,9 @@ export default function ParticipantIntake() {
                           name="fullName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-base font-bold text-[#005a78]">Nama Lengkap Sesuai KTP :</FormLabel>
+                              <FormLabel className="text-sm md:text-base font-bold text-[#005a78]">Nama Lengkap Sesuai KTP :</FormLabel>
                               <FormControl>
-                                <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Masukkan nama lengkap Anda" {...field} />
+                                <Input className="h-12 md:h-14 px-4 md:px-6 text-base md:text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Masukkan nama lengkap Anda" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -308,9 +308,9 @@ export default function ParticipantIntake() {
                           name="whatsapp"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-base font-bold text-[#005a78]">Nomor WhatsApp Aktif :</FormLabel>
+                              <FormLabel className="text-sm md:text-base font-bold text-[#005a78]">Nomor WhatsApp Aktif :</FormLabel>
                               <FormControl>
-                                <Input className="h-14 px-6 text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Contoh: 081234567890" {...field} />
+                                <Input className="h-12 md:h-14 px-4 md:px-6 text-base md:text-lg rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all" placeholder="Contoh: 081234567890" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -318,14 +318,14 @@ export default function ParticipantIntake() {
                         />
 
                         <div className="space-y-4">
-                          <FormLabel className="text-base font-bold text-[#005a78]">Pilih Jenis Layanan</FormLabel>
+                          <FormLabel className="text-sm md:text-base font-bold text-[#005a78]">Pilih Jenis Layanan</FormLabel>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             {['Pendaftaran Peserta', 'Perubahan data', 'Informasi & Pengaduan'].map((type) => (
                               <Button
                                 key={type}
                                 type="button"
                                 variant={form.watch('serviceType') === type ? 'default' : 'outline'}
-                                className={`h-auto py-4 px-2 text-xs font-bold rounded-xl border-2 transition-all text-center leading-snug ${
+                                className={`h-auto py-3 md:py-4 px-2 text-[11px] md:text-xs font-bold rounded-xl border-2 transition-all text-center leading-snug whitespace-normal ${
                                   form.watch('serviceType') === type 
                                   ? 'bg-[#005a78] border-[#005a78] text-white shadow-lg scale-[1.02]' 
                                   : 'border-[#005a78] text-[#005a78] hover:bg-slate-50'
@@ -338,7 +338,11 @@ export default function ParticipantIntake() {
                           </div>
                         </div>
 
-                        <Button type="submit" disabled={isSubmitting} className="w-full h-16 text-xl font-black bg-primary hover:bg-primary/90 rounded-2xl shadow-xl transition-all hover:scale-[1.01] active:scale-[0.98] uppercase tracking-widest">
+                        <Button 
+                          type="submit" 
+                          disabled={isSubmitting} 
+                          className="w-full h-14 md:h-16 text-lg md:text-xl font-black bg-primary hover:bg-primary/90 rounded-2xl shadow-xl transition-all hover:scale-[1.01] active:scale-[0.98] uppercase tracking-wider md:tracking-widest"
+                        >
                           {isSubmitting ? 'Memproses...' : 'Ambil Nomor Antrian'}
                         </Button>
                       </form>
@@ -349,28 +353,28 @@ export default function ParticipantIntake() {
             </Card>
           ) : (
             <Card className="shadow-2xl border-none rounded-3xl overflow-hidden bg-white animate-in zoom-in duration-500">
-              <CardContent className="p-12 text-center space-y-8">
-                <div className="bg-emerald-100 p-6 rounded-full w-fit mx-auto">
-                  <CheckCircle2 className="w-16 h-16 text-emerald-600" />
+              <CardContent className="p-8 md:p-12 text-center space-y-8">
+                <div className="bg-emerald-100 p-5 md:p-6 rounded-full w-fit mx-auto">
+                  <CheckCircle2 className="w-12 h-12 md:w-16 md:h-16 text-emerald-600" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-3xl font-black text-[#005a78]">Nomor Antrian Berhasil Diambil</h2>
-                  <p className="text-muted-foreground font-medium">Simpan nomor antrian Anda dan tunggu panggilan petugas.</p>
+                  <h2 className="text-2xl md:text-3xl font-black text-[#005a78]">Nomor Antrian Berhasil Diambil</h2>
+                  <p className="text-sm md:text-base text-muted-foreground font-medium">Simpan nomor antrian Anda dan tunggu panggilan petugas.</p>
                 </div>
                 
-                <div className="bg-slate-50 rounded-3xl p-10 space-y-4 border-2 border-dashed border-primary/30">
-                  <span className="text-8xl font-black text-primary tracking-tighter block">{finalQueue?.queueNumber}</span>
-                  <Badge className="bg-[#005a78] text-white px-6 py-2 text-lg font-bold rounded-full uppercase">
+                <div className="bg-slate-50 rounded-3xl p-6 md:p-10 space-y-4 border-2 border-dashed border-primary/30">
+                  <span className="text-6xl md:text-8xl font-black text-primary tracking-tighter block">{finalQueue?.queueNumber}</span>
+                  <Badge className="bg-[#005a78] text-white px-4 md:px-6 py-1.5 md:py-2 text-base md:text-lg font-bold rounded-full uppercase">
                     {finalQueue?.serviceType}
                   </Badge>
                 </div>
 
-                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-3">
+                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 md:p-6 space-y-3">
                   <div className="flex items-center gap-2 justify-center text-primary">
                     <MessageSquare className="w-5 h-5" />
-                    <span className="font-bold">Konfirmasi WhatsApp</span>
+                    <span className="font-bold text-sm md:text-base">Konfirmasi WhatsApp</span>
                   </div>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-xs md:text-sm text-slate-600">
                     Kami akan mengirimkan link Zoom ke nomor <span className="font-black text-[#005a78]">{finalQueue?.whatsapp}</span> saat giliran Anda tiba.
                   </p>
                 </div>
@@ -388,55 +392,55 @@ export default function ParticipantIntake() {
         <div className="lg:col-span-5 space-y-6">
           <div className="flex items-end justify-between">
             <div className="space-y-1">
-              <h2 className="text-3xl font-black text-[#005a78] font-headline tracking-tight">Informasi Antrian</h2>
-              <p className="text-sm text-muted-foreground font-medium">
+              <h2 className="text-2xl md:text-3xl font-black text-[#005a78] font-headline tracking-tight">Informasi Antrian</h2>
+              <p className="text-xs md:text-sm text-muted-foreground font-medium">
                 {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
               </p>
             </div>
             <Badge variant="outline" className="mb-1 bg-white border-none shadow-sm flex gap-2 py-1.5 px-3">
               <RefreshCcw className="w-3 h-3 text-primary animate-spin" style={{ animationDuration: '3s' }} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Live Sync</span>
+              <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest">Live Sync</span>
             </Badge>
           </div>
 
           <div className="space-y-4">
             <Card className="bg-white/40 border-none shadow-md backdrop-blur-sm overflow-hidden">
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center gap-2 text-primary mb-4">
-                  <RefreshCcw className="w-5 h-5" />
-                  <span className="font-bold text-xs uppercase tracking-[0.2em]">Sedang Diproses (Maks. 3)</span>
+                  <RefreshCcw className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em]">Sedang Diproses (Maks. 3)</span>
                 </div>
                 <div className="space-y-4">
                   {queueInfo.current.length > 0 ? (
                     queueInfo.current.map((p) => (
                       <div key={p.id} className="flex items-center justify-between border-b border-primary/10 pb-3 last:border-0 last:pb-0">
-                        <span className="text-4xl font-black text-[#005a78]">{p.queueNumber}</span>
+                        <span className="text-3xl md:text-4xl font-black text-[#005a78]">{p.queueNumber}</span>
                         <div className="text-right">
-                          <span className="font-bold text-lg block truncate max-w-[200px]">{p.fullName}</span>
-                          <Badge variant="outline" className="text-[10px] font-bold uppercase py-0.5">{p.serviceType}</Badge>
+                          <span className="font-bold text-base md:text-lg block truncate max-w-[150px] md:max-w-[200px]">{p.fullName}</span>
+                          <Badge variant="outline" className="text-[9px] md:text-[10px] font-bold uppercase py-0.5">{p.serviceType}</Badge>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted-foreground italic">Belum ada antrian yang sedang diproses.</p>
+                    <p className="text-xs md:text-sm text-muted-foreground italic">Belum ada antrian yang sedang diproses.</p>
                   )}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-emerald-50 border-none shadow-md overflow-hidden">
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center gap-2 text-emerald-600 mb-3">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-bold text-xs uppercase tracking-[0.2em]">Terakhir Selesai</span>
+                  <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em]">Terakhir Selesai</span>
                 </div>
                 {queueInfo.lastFinished ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-3xl font-black text-emerald-700">{queueInfo.lastFinished.queueNumber}</span>
-                    <span className="font-bold text-lg truncate max-w-[200px]">{queueInfo.lastFinished.fullName}</span>
+                    <span className="text-2xl md:text-3xl font-black text-emerald-700">{queueInfo.lastFinished.queueNumber}</span>
+                    <span className="font-bold text-base md:text-lg truncate max-w-[150px] md:max-w-[200px]">{queueInfo.lastFinished.fullName}</span>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground italic">Belum ada antrian yang selesai hari ini.</p>
+                  <p className="text-xs md:text-sm text-muted-foreground italic">Belum ada antrian yang selesai hari ini.</p>
                 )}
               </CardContent>
             </Card>
@@ -444,18 +448,18 @@ export default function ParticipantIntake() {
 
           <div className="grid grid-cols-4 gap-2">
             {[
-              { label: 'Total Antrian', value: `${queueInfo.total}`, icon: Users, color: 'text-blue-600' },
-              { label: 'Menunggu', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
-              { label: 'Selesai', value: queueInfo.served, icon: CheckCircle2, color: 'text-emerald-600' },
+              { label: 'Total', value: `${queueInfo.total}`, icon: Users, color: 'text-blue-600' },
+              { label: 'Antri', value: queueInfo.waiting, icon: Clock, color: 'text-teal-600' },
+              { label: 'Fin', value: queueInfo.served, icon: CheckCircle2, color: 'text-emerald-600' },
               { label: 'Absen', value: '0', icon: XCircle, color: 'text-rose-500' },
             ].map((stat, i) => (
               <Card key={i} className="bg-white border-none shadow-md text-center group hover:scale-[1.02] transition-all">
-                <CardContent className="p-3 flex flex-col items-center gap-1.5">
-                  <div className="bg-slate-50 p-1.5 rounded-lg group-hover:bg-white transition-colors">
-                    <stat.icon className={`w-4 h-4 ${stat.color} opacity-70`} />
+                <CardContent className="p-2 md:p-3 flex flex-col items-center gap-1 md:gap-1.5">
+                  <div className="bg-slate-50 p-1 md:p-1.5 rounded-lg group-hover:bg-white transition-colors">
+                    <stat.icon className={`w-3 h-3 md:w-4 md:h-4 ${stat.color} opacity-70`} />
                   </div>
-                  <span className={`text-xl font-black ${stat.color}`}>{stat.value}</span>
-                  <span className="text-[8px] leading-tight uppercase font-bold text-muted-foreground tracking-tighter">{stat.label}</span>
+                  <span className={`text-base md:text-xl font-black ${stat.color}`}>{stat.value}</span>
+                  <span className="text-[7px] md:text-[8px] leading-tight uppercase font-bold text-muted-foreground tracking-tighter">{stat.label}</span>
                 </CardContent>
               </Card>
             ))}
@@ -464,46 +468,46 @@ export default function ParticipantIntake() {
       </main>
 
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <AlertDialogContent className="rounded-[2.5rem] max-w-[420px] p-8 border-none shadow-2xl overflow-hidden">
+        <AlertDialogContent className="rounded-[2.5rem] max-w-[90vw] md:max-w-[420px] p-6 md:p-8 border-none shadow-2xl overflow-hidden">
           <AlertDialogHeader className="space-y-4">
-            <AlertDialogTitle className="text-center text-3xl font-black text-[#005a78] tracking-tight">
+            <AlertDialogTitle className="text-center text-2xl md:text-3xl font-black text-[#005a78] tracking-tight">
               Konfirmasi Nomor
             </AlertDialogTitle>
             <AlertDialogDescription asChild className="text-center">
               <div className="space-y-6">
-                <p className="text-slate-500 font-medium">Apakah nomor WhatsApp Anda sudah benar?</p>
+                <p className="text-sm md:text-base text-slate-500 font-medium">Apakah nomor WhatsApp Anda sudah benar?</p>
                 
-                <div className="py-5 px-4 bg-primary/5 rounded-[2rem] border-2 border-primary/20 flex items-center justify-center gap-3 shadow-inner group transition-all hover:bg-primary/10">
-                  <div className="bg-primary/10 p-2 rounded-xl group-hover:scale-110 transition-transform shrink-0">
-                    <Phone className="w-6 h-6 text-primary" />
+                <div className="py-4 md:py-5 px-3 md:px-4 bg-primary/5 rounded-[1.5rem] md:rounded-[2rem] border-2 border-primary/20 flex items-center justify-center gap-3 shadow-inner group transition-all hover:bg-primary/10">
+                  <div className="bg-primary/10 p-1.5 md:p-2 rounded-xl group-hover:scale-110 transition-transform shrink-0">
+                    <Phone className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                   </div>
-                  <span className="text-xl sm:text-2xl md:text-3xl font-black text-primary tabular-nums break-all">
+                  <span className="text-xl md:text-3xl font-black text-primary tabular-nums break-all">
                     {pendingData?.whatsapp}
                   </span>
                 </div>
                 
-                <div className="text-sm leading-relaxed text-slate-500 px-2">
+                <div className="text-xs md:text-sm leading-relaxed text-slate-500 px-2">
                   Sangat penting untuk memastikan nomor ini aktif karena <strong className="text-[#005a78]">Link Zoom</strong> layanan akan kami kirimkan ke nomor ini.
                 </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-col gap-3 mt-8 sm:flex-col sm:space-x-0">
+          <AlertDialogFooter className="flex flex-col gap-3 mt-6 md:mt-8 sm:flex-col sm:space-x-0">
             <AlertDialogAction 
               onClick={handleFinalSubmit}
               disabled={isSubmitting}
-              className="w-full h-14 bg-primary hover:bg-primary/90 rounded-2xl font-black text-lg shadow-xl hover:scale-[1.02] transition-all active:scale-[0.98] border-none"
+              className="w-full h-12 md:h-14 bg-primary hover:bg-primary/90 rounded-2xl font-black text-base md:text-lg shadow-xl hover:scale-[1.02] transition-all active:scale-[0.98] border-none"
             >
               {isSubmitting ? 'Memproses...' : 'Ya, Sudah Benar'}
             </AlertDialogAction>
-            <AlertDialogCancel disabled={isSubmitting} className="w-full h-14 bg-slate-50 hover:bg-slate-100 border-none rounded-2xl font-bold text-slate-500 transition-all hover:text-slate-700">
+            <AlertDialogCancel disabled={isSubmitting} className="w-full h-12 md:h-14 bg-slate-50 hover:bg-slate-100 border-none rounded-2xl font-bold text-slate-500 transition-all hover:text-slate-700">
               Ubah Nomor
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <footer className="bg-emerald-500 text-white p-3 text-center text-xs font-bold tracking-widest shadow-inner mt-12">
+      <footer className="bg-emerald-500 text-white p-3 text-center text-[10px] md:text-xs font-bold tracking-widest shadow-inner mt-8 md:mt-12">
         VIOLA Virtual Office Layanan Peserta © 2024 - BPJS Kesehatan
       </footer>
       <Toaster />
