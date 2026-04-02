@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getQueueData, refreshQueueData, getSettings } from '@/lib/queue-store';
 import { Participant, SystemSettings } from '@/lib/queue-types';
-import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Cpu, Database, Cloud } from 'lucide-react';
+import { Clock, Users, ArrowRightCircle, ListChecks, PlayCircle, MonitorPlay, User, AlertCircle, FileVideo, Play, Cpu, Database, Cloud, ListVideo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { adminQueueCallAnnouncement } from '@/ai/flows/admin-queue-call-announcement';
@@ -23,14 +23,16 @@ export default function PublicDashboard() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [videoError, setVideoError] = useState(false);
-  const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   
+  // Video Playlist States
+  const [videoPlaylist, setVideoPlaylist] = useState<string[]>([]);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  
+  const [mounted, setMounted] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [aiStatus, setAiStatus] = useState<'standby' | 'calling' | 'cached' | 'error'>('standby');
   const [aiError, setAiError] = useState<string | null>(null);
-  
   const [announcedTimestamps, setAnnouncedTimestamps] = useState<Record<string, string>>({});
 
   const fetchData = () => {
@@ -63,11 +65,10 @@ export default function PublicDashboard() {
       clearInterval(clockInterval);
       clearInterval(syncInterval);
       window.removeEventListener('viola_storage_update', fetchData);
-      if (localVideoUrl) {
-        URL.revokeObjectURL(localVideoUrl);
-      }
+      // Clean up local URLs to prevent memory leaks
+      videoPlaylist.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [localVideoUrl]);
+  }, [videoPlaylist]);
 
   useEffect(() => {
     if (!isStarted || isCalling || processingRef.current) return;
@@ -93,34 +94,22 @@ export default function PublicDashboard() {
     setAiError(null);
 
     try {
-      // Menggunakan Nomor Antrian sebagai kunci cache utama (tanpa Nama)
-      // Agar suara nomor yang sama bisa digunakan berulang kali
       const cacheKey = participant.queueNumber.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      
       const cacheRef = doc(db, 'voice_cache', cacheKey);
       const cacheSnap = await getDoc(cacheRef);
 
-      // 1. Cek apakah suara untuk Nomor Antrian ini sudah ada di Storage/Cache
       if (cacheSnap.exists()) {
         const cachedData = cacheSnap.data();
         if (cachedData.audioUrl && audioRef.current) {
-          console.log(`[STORAGE CACHE] Memutar rekaman tersimpan untuk nomor ${participant.queueNumber}`);
           setAiStatus('cached');
           audioRef.current.src = cachedData.audioUrl;
-          
           await audioRef.current.play();
-          
-          audioRef.current.onended = () => {
-            finishAnnouncement(participant);
-          };
+          audioRef.current.onended = () => finishAnnouncement(participant);
           return;
         }
       }
 
-      // 2. Jika tidak ada di cache, minta ke Gemini AI (Hanya per nomor antrian)
-      console.log(`[STORAGE CACHE] Meminta suara baru ke Gemini AI untuk nomor ${participant.queueNumber}...`);
       setAiStatus('calling');
-      
       const result = await adminQueueCallAnnouncement({
         queueNumber: participant.queueNumber
       });
@@ -131,14 +120,10 @@ export default function PublicDashboard() {
       }
 
       if (result.audioDataUri && audioRef.current) {
-        // 3. Simpan ke Firebase Storage
         const storageRef = ref(storage, `announcements/${cacheKey}.wav`);
         await uploadString(storageRef, result.audioDataUri, 'data_url');
-        
-        // 4. Dapatkan link permanen dari Storage
         const downloadUrl = await getDownloadURL(storageRef);
 
-        // 5. Catat link di Firestore voice_cache agar bisa digunakan peserta lain dengan nomor sama
         await setDoc(cacheRef, {
           audioUrl: downloadUrl,
           queueNumber: participant.queueNumber,
@@ -147,10 +132,7 @@ export default function PublicDashboard() {
 
         audioRef.current.src = downloadUrl;
         await audioRef.current.play();
-        
-        audioRef.current.onended = () => {
-          finishAnnouncement(participant);
-        };
+        audioRef.current.onended = () => finishAnnouncement(participant);
       } else {
         resetLock();
       }
@@ -166,7 +148,6 @@ export default function PublicDashboard() {
       [participant.id]: participant.calledAt!
     }));
     
-    // Jeda 5 detik untuk keamanan kuota dan kenyamanan telinga
     setTimeout(() => {
       setAiStatus('standby');
       setIsCalling(false);
@@ -177,9 +158,7 @@ export default function PublicDashboard() {
   const handleError = (errorMsg: string) => {
     setAiStatus('error');
     setAiError(errorMsg === 'QUOTA_EXHAUSTED' ? "Limit AI Tercapai" : `Error AI`);
-    setTimeout(() => {
-      resetLock();
-    }, 5000);
+    setTimeout(() => resetLock(), 5000);
   };
 
   const resetLock = () => {
@@ -188,15 +167,29 @@ export default function PublicDashboard() {
     processingRef.current = false;
   };
 
+  // Multiple Video Selection Handler
   const handleLocalVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (localVideoUrl) {
-        URL.revokeObjectURL(localVideoUrl);
-      }
-      const url = URL.createObjectURL(file);
-      setLocalVideoUrl(url);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      // Revoke old URLs
+      videoPlaylist.forEach(url => URL.revokeObjectURL(url));
+      
+      const newUrls = files.map(file => URL.createObjectURL(file));
+      setVideoPlaylist(newUrls);
+      setCurrentVideoIndex(0);
       setVideoError(false);
+      
+      toast({
+        title: "Playlist Ditambahkan",
+        description: `${files.length} video siap diputar secara berurutan.`,
+      });
+    }
+  };
+
+  // Video End Handler for Playlist
+  const handleVideoEnded = () => {
+    if (videoPlaylist.length > 1) {
+      setCurrentVideoIndex((prev) => (prev + 1) % videoPlaylist.length);
     }
   };
 
@@ -241,7 +234,7 @@ export default function PublicDashboard() {
   const nextInQueue = participants.find(p => p.status === 'Waiting');
   const totalToday = participants.length;
 
-  const currentVideoSource = localVideoUrl || (settings?.videoUrl ? String(settings.videoUrl).trim() : null);
+  const currentVideoSource = videoPlaylist[currentVideoIndex] || (settings?.videoUrl ? String(settings.videoUrl).trim() : null);
 
   if (!mounted) return <div className="min-h-screen bg-background" />;
 
@@ -319,12 +312,14 @@ export default function PublicDashboard() {
                   className="w-full h-full object-cover" 
                   src={currentVideoSource} 
                   autoPlay 
-                  loop 
                   muted 
                   playsInline
                   preload="auto"
                   onError={() => setVideoError(true)}
                   onLoadedData={() => setVideoError(false)}
+                  onEnded={handleVideoEnded}
+                  // Loop single video if playlist is empty or only 1 item
+                  loop={videoPlaylist.length <= 1}
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-white/10 p-10 text-center">
@@ -342,12 +337,34 @@ export default function PublicDashboard() {
                 </div>
               )}
 
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <input type="file" accept="video/*" ref={fileInputRef} className="hidden" onChange={handleLocalVideoSelect} />
-                <Button variant="secondary" size="sm" className="rounded-full bg-black/50 hover:bg-black/80 text-white border-none backdrop-blur-md" onClick={() => fileInputRef.current?.click()}>
-                  <FileVideo className="w-4 h-4 mr-2" /> Pilih Video Lokal
+              {/* Video Controls Overlay */}
+              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <input 
+                  type="file" 
+                  accept="video/*" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  multiple 
+                  onChange={handleLocalVideoSelect} 
+                />
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="rounded-full bg-black/50 hover:bg-black/80 text-white border-none backdrop-blur-md" 
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ListVideo className="w-4 h-4 mr-2" /> Pilih Daftar Video
                 </Button>
               </div>
+
+              {/* Playlist Status Badge */}
+              {videoPlaylist.length > 1 && (
+                <div className="absolute bottom-4 left-4">
+                  <Badge className="bg-black/50 backdrop-blur-md border-none text-[10px] font-black uppercase tracking-widest px-3 py-1.5">
+                    Memutar {currentVideoIndex + 1} dari {videoPlaylist.length}
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
 
